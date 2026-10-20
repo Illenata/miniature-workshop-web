@@ -12,7 +12,7 @@
 | --- | --- |
 | `apps/api` | Сервер на Fastify: API, віддача файлів, міграції (`drizzle/`), сід (`scripts/seed.ts`) |
 | `packages/contract` | Zod-схеми контракту (розділи 5, 8 і 14 ТЗ): manifest, елемент мініатюри, коди помилок |
-| `docker-compose.yml` | PostgreSQL, MinIO (локальне S3-сховище) і API |
+| `docker-compose.yml` | PostgreSQL, RustFS (локальне S3-сховище) і API |
 | `.env.example` | Усі змінні з поясненнями |
 
 Стек: Node 24, TypeScript, Fastify, Drizzle ORM, PostgreSQL 17, будь-яке S3-сумісне сховище, sharp, Zod.
@@ -38,13 +38,14 @@ curl "http://localhost:3000/api/v1/gallery?faction=gilded"
 ```
 
 `.env` створювати не обов'язково: compose і скрипти беруть значення з `.env.example`, а `.env` лише перекриває
-їх. Консоль MinIO відкривається на http://localhost:9001 з логіном і паролем із `S3_ACCESS_KEY_ID` і
-`S3_SECRET_ACCESS_KEY`.
+їх. Консоль сховища (RustFS) відкривається на http://localhost:9001 з логіном і паролем із `S3_ACCESS_KEY_ID` і
+`S3_SECRET_ACCESS_KEY`. MinIO у 2025 році перестав публікувати образи, тому локально стоїть RustFS; на проді
+підійде будь-який S3-сумісний сервіс.
 
 ### Розробка
 
 ```bash
-docker compose up -d postgres minio   # лише сервіси
+docker compose up -d postgres storage # лише сервіси
 npm install
 npm run dev                           # API з автоперезапуском на http://localhost:3000
 npm test                              # юніт-тести

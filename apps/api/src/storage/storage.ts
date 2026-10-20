@@ -32,7 +32,7 @@ export function objectKey(collectionId: string, miniatureId: string, data: Buffe
 
 export type StoredObject = { body: Readable; contentLength: number | undefined };
 
-/** Thin wrapper over any S3-compatible service (MinIO locally). */
+/** Thin wrapper over any S3-compatible service (RustFS locally). */
 export class Storage {
   readonly client: S3Client;
   readonly bucket: string;
