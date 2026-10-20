@@ -10,6 +10,13 @@ import { NonceContext } from "./lib/nonce";
 export const streamTimeout = 5_000;
 
 /**
+ * The <style> block inside model-viewer's shadow DOM (@google/model-viewer 4.3.1).
+ * Allowed by hash so style-src needs no 'unsafe-inline'. After upgrading model-viewer,
+ * check the browser console in 3D mode: a CSP error prints the new hash to use here.
+ */
+const MODEL_VIEWER_STYLE_HASH = "'sha256-F7kvx28zBT3UUQL/hTOYst+55RSmqyCY3muSCYmt6A4='";
+
+/**
  * Strict CSP for the pages (spec section 3): scripts only from our origin or with this
  * request's nonce, images and models only from our origin and the files origin.
  * Not applied in development, where Vite injects inline scripts and styles for HMR.
@@ -23,10 +30,13 @@ function securityHeaders(headers: Headers, nonce: string) {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      `script-src 'self' 'nonce-${nonce}'`,
-      "style-src 'self'",
-      `img-src 'self' data: ${env.filesOrigin}`,
-      `connect-src 'self' ${env.filesOrigin}`,
+      // 'wasm-unsafe-eval' lets model-viewer compile its bundled meshopt decoder;
+      // it allows WebAssembly only, not eval() of JavaScript.
+      `script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+      `style-src 'self' ${MODEL_VIEWER_STYLE_HASH}`,
+      // blob: is how three.js hands textures embedded in a glb to the GPU.
+      `img-src 'self' data: blob: ${env.filesOrigin}`,
+      `connect-src 'self' blob: ${env.filesOrigin}`,
       "font-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",

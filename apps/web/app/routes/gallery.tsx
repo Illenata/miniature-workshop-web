@@ -3,10 +3,13 @@ import { useFetcher, useLocation } from "react-router";
 import { factionSchema, type Faction } from "@mw/contract";
 import type { Route } from "./+types/gallery";
 import { FactionFilter } from "../components/FactionFilter";
+import { ViewModeToggle } from "../components/ViewModeToggle";
 import { MiniatureTile } from "../components/MiniatureTile";
 import { fetchGalleryPage } from "../lib/api.server";
 import { isHydrated } from "../lib/hydration";
 import { isLang, translate, useT } from "../lib/i18n";
+import { loadModelViewer } from "../lib/model-viewer";
+import { useViewMode } from "../lib/view-mode";
 import type { TilePage } from "../lib/tiles";
 
 function parseFaction(value: string | null): Faction | undefined {
@@ -106,12 +109,22 @@ function GalleryView({ historyKey, faction, page }: ViewProps) {
   }, [fetcher.state, fetcher.data, historyKey, t]);
 
   const loading = fetcher.state !== "idle";
+  const mode = useViewMode();
+  useEffect(() => {
+    if (mode === "3d") void loadModelViewer();
+  }, [mode]);
 
   return (
     <div className="mx-auto max-w-screen-2xl px-4 pb-16 pt-5">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t("gallery.title")}</h1>
-        <FactionFilter current={faction} />
+      {/* Phones: title and Card/3D on one row, filter below. Wider: all on one row. */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <h1 className="mr-auto text-xl font-semibold tracking-tight sm:text-2xl">{t("gallery.title")}</h1>
+        <div className="order-3 w-full sm:order-2 sm:w-auto">
+          <FactionFilter current={faction} />
+        </div>
+        <div className="order-2 sm:order-3">
+          <ViewModeToggle />
+        </div>
       </div>
 
       {state.tiles.length === 0 ? (
@@ -122,6 +135,7 @@ function GalleryView({ historyKey, faction, page }: ViewProps) {
             <MiniatureTile
               key={tile.id}
               tile={tile}
+              mode={mode}
               priority={i < 2 ? "high" : i < 6 ? "eager" : "lazy"}
             />
           ))}

@@ -5,10 +5,12 @@
  *   npm run seed                    # 1000 miniatures
  *   npm run seed -- --count 200
  *   npm run seed -- --reset         # wipe miniatures, collections and their files first
+ *   npm run seed -- --glb D:/samples/miniature.glb   # use a real model instead of the placeholder
  *
  * Files go through the same derivatives module as real uploads.
  */
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { sql } from "drizzle-orm";
@@ -26,6 +28,7 @@ const { values: args } = parseArgs({
     count: { type: "string", default: "1000" },
     designs: { type: "string", default: "24" },
     reset: { type: "boolean", default: false },
+    glb: { type: "string" },
   },
 });
 const COUNT = Number(args.count);
@@ -113,7 +116,17 @@ type Design = {
   faction: Faction | null;
 };
 
+/** A real model from the game team, if given; kept outside the repo (it is a game asset). */
+async function loadSampleGlb(): Promise<Buffer | null> {
+  if (!args.glb) return null;
+  const data = await readFile(args.glb);
+  if (data.toString("ascii", 0, 4) !== "glTF") throw new Error(`${args.glb} is not a glTF binary`);
+  console.log(`Using ${args.glb} (${(data.length / 1e6).toFixed(1)} MB) as the model for every miniature`);
+  return data;
+}
+
 async function buildDesigns(): Promise<Design[]> {
+  const sampleGlb = await loadSampleGlb();
   const factions: (Faction | null)[] = ["painted", "gilded", null];
   return Promise.all(
     Array.from({ length: DESIGNS }, async (_, i) => {
@@ -122,7 +135,7 @@ async function buildDesigns(): Promise<Design[]> {
       const d = await deriveFromCard(card);
       const rgb: [number, number, number] =
         faction === "gilded" ? [0.79, 0.64, 0.15] : faction === "painted" ? [0.23, 0.44, 0.83] : [0.5, 0.5, 0.5];
-      return { card, ...d, glb: placeholderGlb(rgb), faction };
+      return { card, ...d, glb: sampleGlb ?? placeholderGlb(rgb), faction };
     }),
   );
 }

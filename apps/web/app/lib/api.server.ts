@@ -13,6 +13,7 @@ export function toTile(item: MiniatureItem): Tile {
     ownerName: item.owner.name,
     thumb400: item.files.thumb_400,
     thumb800: item.files.thumb_800,
+    glb: item.files.glb,
   };
 }
 

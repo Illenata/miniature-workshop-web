@@ -1,9 +1,13 @@
+import { useRef } from "react";
 import { Link } from "react-router";
-import type { Tile } from "../lib/tiles";
 import { useT } from "../lib/i18n";
+import { useModelSlot } from "../lib/model-slots";
+import { usePrefersReducedMotion } from "../lib/model-viewer";
+import type { Tile } from "../lib/tiles";
+import type { ViewMode } from "../lib/view-mode";
 
 /**
- * Tile widths in the grid, matching the column classes in GalleryGrid:
+ * Tile widths in the grid, matching the column classes in the gallery grid:
  * 2 columns on phones, 3 from 640 px, 4 from 1024, 5 from 1280, 6 from 1536 (max width).
  */
 export const TILE_SIZES = [
@@ -16,12 +20,17 @@ export const TILE_SIZES = [
 
 type Props = {
   tile: Tile;
+  mode: ViewMode;
   /** Above-the-fold tiles load immediately; the very first ones get high priority (LCP). */
   priority: "high" | "eager" | "lazy";
 };
 
-export function MiniatureTile({ tile, priority }: Props) {
+export function MiniatureTile({ tile, mode, priority }: Props) {
   const t = useT();
+  const mediaRef = useRef<HTMLDivElement>(null);
+  const hasModelSlot = useModelSlot(tile.id, mediaRef, mode === "3d");
+  const reducedMotion = usePrefersReducedMotion();
+
   const workshop = tile.ownerName
     ? t("workshop.named", { name: tile.ownerName })
     : t("workshop.anonymous", { id: tile.collectionId });
@@ -29,19 +38,38 @@ export function MiniatureTile({ tile, priority }: Props) {
   return (
     <li>
       <Link to={`/m/${tile.id}`} prefetch="none" className="group block rounded-lg">
-        <div className="aspect-[3/4] overflow-hidden rounded-lg bg-raised">
-          <img
-            src={tile.thumb400}
-            srcSet={`${tile.thumb400} 400w, ${tile.thumb800} 800w`}
-            sizes={TILE_SIZES}
-            width={400}
-            height={533}
-            alt={tile.title}
-            loading={priority === "lazy" ? "lazy" : "eager"}
-            fetchPriority={priority === "high" ? "high" : "auto"}
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
-          />
+        <div ref={mediaRef} className="relative aspect-[3/4] overflow-hidden rounded-lg bg-raised">
+          {hasModelSlot ? (
+            // In a tile: slow turntable, no camera controls; a tap opens the miniature page.
+            <model-viewer
+              src={tile.glb}
+              poster={tile.thumb800}
+              alt={tile.title}
+              loading="eager"
+              reveal="auto"
+              auto-rotate={reducedMotion ? undefined : true}
+              auto-rotate-delay={0}
+              rotation-per-second="18deg"
+              camera-orbit="0deg 75deg 105%"
+              interaction-prompt="none"
+              environment-image="neutral"
+              shadow-intensity={0.8}
+              className="block h-full w-full"
+            />
+          ) : (
+            <img
+              src={tile.thumb400}
+              srcSet={`${tile.thumb400} 400w, ${tile.thumb800} 800w`}
+              sizes={TILE_SIZES}
+              width={400}
+              height={533}
+              alt={tile.title}
+              loading={priority === "lazy" ? "lazy" : "eager"}
+              fetchPriority={priority === "high" ? "high" : "auto"}
+              decoding="async"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
+            />
+          )}
         </div>
         <div className="mt-2 min-w-0 px-0.5">
           {/* The title is already the image's alt text; hidden here to avoid reading it twice. */}

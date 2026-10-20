@@ -9,6 +9,8 @@ export type Tile = {
   ownerName: string | null;
   thumb400: string;
   thumb800: string;
+  /** Poster-quality card is thumb800; the model is only fetched in 3D mode. */
+  glb: string;
 };
 
 export type TilePage = { tiles: Tile[]; nextCursor: string | null };
