@@ -3,19 +3,20 @@
 Сайт показує мініатюри, пофарбовані в грі Miniature Workshop. Гравець ділиться ними одним посиланням, а глядач
 переходить до сторінки гри в Steam і в Discord. ТЗ: `WEB_COMPANION_SPEC.md` у проєкті Anton-а.
 
-**Стан:** фаза 1, перший зріз. Уже є база й міграції, `/healthz`, `GET /api/v1/gallery`, віддача файлів і сід на
-1000 мініатюр. Сторінок і завантаження з гри ще немає.
+**Стан:** фаза 1. Уже є база й міграції, `/healthz`, `GET /api/v1/gallery`, віддача файлів, сід на 1000 мініатюр і
+сторінка `/gallery`. Сторінок мініатюри й колекції та завантаження з гри ще немає.
 
 ## Структура
 
 | Шлях | Що це |
 | --- | --- |
+| `apps/web` | Сторінки: React Router 7 із серверним рендером, Tailwind, рядки інтерфейсу в `app/i18n/*.json` |
 | `apps/api` | Сервер на Fastify: API, віддача файлів, міграції (`drizzle/`), сід (`scripts/seed.ts`) |
 | `packages/contract` | Zod-схеми контракту (розділи 5, 8 і 14 ТЗ): manifest, елемент мініатюри, коди помилок |
-| `docker-compose.yml` | PostgreSQL, RustFS (локальне S3-сховище) і API |
+| `docker-compose.yml` | PostgreSQL, RustFS (локальне S3-сховище), API і сторінки |
 | `.env.example` | Усі змінні з поясненнями |
 
-Стек: Node 24, TypeScript, Fastify, Drizzle ORM, PostgreSQL 17, будь-яке S3-сумісне сховище, sharp, Zod.
+Стек: Node 24, TypeScript, React 19, React Router 7, Tailwind 4, Fastify, Drizzle ORM, PostgreSQL 17, будь-яке S3-сумісне сховище, sharp, Zod.
 Монорепо на npm workspaces і Turborepo.
 
 ## Запуск локально
@@ -33,9 +34,11 @@ curl http://localhost:3000/healthz
 npm install
 npm run seed
 
-# 4. Подивитися
+# 4. Подивитися: галерея на http://localhost:5173/gallery, API напряму:
 curl "http://localhost:3000/api/v1/gallery?faction=gilded"
 ```
+
+Після змін у коді образи треба перезібрати: `docker compose up -d --build`.
 
 `.env` створювати не обов'язково: compose і скрипти беруть значення з `.env.example`, а `.env` лише перекриває
 їх. Консоль сховища (RustFS) відкривається на http://localhost:9001 з логіном і паролем із `S3_ACCESS_KEY_ID` і
@@ -45,9 +48,9 @@ curl "http://localhost:3000/api/v1/gallery?faction=gilded"
 ### Розробка
 
 ```bash
-docker compose up -d postgres storage # лише сервіси
+docker compose up -d postgres storage # лише сервіси (api і web з compose при цьому не запускай)
 npm install
-npm run dev                           # API з автоперезапуском на http://localhost:3000
+npm run dev                           # API на :3000 і сторінки на :5173 з автоперезапуском
 npm test                              # юніт-тести
 npm run typecheck
 ```
@@ -79,9 +82,21 @@ npm run seed -- --reset         # спершу стерти всі мініат�
 з `nosniff`, а журнал мазків не віддається ніколи. Якщо мініатюру сховали, її файли перестають віддаватися
 протягом 30 секунд.
 
+## Сторінки
+
+`/gallery` рендериться на сервері й адаптована під телефон: 2 колонки від 360 px, до 6 на широкому екрані.
+Фільтр за фракцією живе в URL (`?faction=gilded`). «Показати ще» дозавантажує сторінки без перезавантаження, а
+кнопка «назад» зі сторінки мініатюри повертає на те саме місце з усіма дозавантаженими плитками. Без JS
+«Показати ще» працює як звичайне посилання на наступну сторінку.
+
+Мова визначається за cookie `lang`, потім за мовою браузера. Перемикач у шапці — звичайна форма. Нові рядки
+додаються в обидва файли `apps/web/app/i18n/en.json` і `uk.json`, тест перевіряє, що ключі збігаються.
+
+У продакшні сторінки віддаються зі строгою CSP: скрипти лише свої або з nonce запиту, зображення лише зі свого
+origin і origin файлів.
+
 ## Що далі
 
-1. Сторінка `/gallery` (React Router v7, SSR, mobile-first).
-2. Перемикач «Картка / 3D» з model-viewer.
-3. `POST /api/v1/uploads` з перевірками з розділу 5, далі сторінки мініатюри й колекції.
-4. Caddy з TLS і продакшн-конфіг, скрипт резервної копії бази.
+1. Перемикач «Картка / 3D» з model-viewer.
+2. `POST /api/v1/uploads` з перевірками з розділу 5, далі сторінки мініатюри й колекції.
+3. Caddy з TLS і продакшн-конфіг, скрипт резервної копії бази.

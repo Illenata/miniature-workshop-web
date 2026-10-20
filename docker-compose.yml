@@ -1,6 +1,6 @@
-# Local stack: PostgreSQL + RustFS (S3-compatible storage) + API.
+# Local stack: PostgreSQL + RustFS (S3-compatible storage) + API + pages.
 #   docker compose up -d --build         everything
-#   docker compose up -d postgres storage only the services, API runs with `npm run dev`
+#   docker compose up -d postgres storage only the services; API and pages run with `npm run dev`
 # Settings come from .env.example, overridden by .env if present.
 # Ports are bound to 127.0.0.1 so nothing is exposed to the local network.
 # The reverse proxy with TLS (Caddy) is added with the production setup.
@@ -34,8 +34,9 @@ services:
   # Local S3-compatible storage. MinIO no longer publishes container images (2025),
   # so local development uses RustFS. Production uses whatever S3-compatible service
   # the host provides; the app only speaks plain S3. Override with STORAGE_IMAGE.
+  # Pinned by digest: the `latest` build of 2026-10-17 (RustFS publishes few fixed tags).
   storage:
-    image: ${STORAGE_IMAGE:-rustfs/rustfs:latest}
+    image: ${STORAGE_IMAGE:-rustfs/rustfs@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b}
     restart: unless-stopped
     command: ["/data"]
     environment:
@@ -69,6 +70,21 @@ services:
         condition: service_healthy
       storage:
         condition: service_started
+
+  web:
+    <<: *env
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      API_INTERNAL_URL: http://api:3000
+    ports:
+      - "127.0.0.1:5173:3000"
+    depends_on:
+      - api
 
 volumes:
   pgdata:
