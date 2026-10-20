@@ -1,0 +1,75 @@
+# Local stack: PostgreSQL + MinIO (S3-compatible) + API.
+#   docker compose up -d --build        everything
+#   docker compose up -d postgres minio  only the services, API runs with `npm run dev`
+# Settings come from .env.example, overridden by .env if present.
+# Ports are bound to 127.0.0.1 so nothing is exposed to the local network.
+# The reverse proxy with TLS (Caddy) is added with the production setup.
+
+name: miniature-workshop
+
+x-env: &env
+  env_file:
+    - path: .env.example
+    - path: .env
+      required: false
+
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mw-local-password}
+      POSTGRES_DB: ${POSTGRES_DB:-mw}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    # MinIO stopped publishing images on Docker Hub in 2025; the quay.io mirror
+    # still carries the final community release. Local development only:
+    # production uses whatever S3-compatible storage the host provides.
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-mw-local}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-mw-local-secret}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    <<: *env
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-mw}:${POSTGRES_PASSWORD:-mw-local-password}@postgres:5432/${POSTGRES_DB:-mw}
+      S3_ENDPOINT: http://minio:9000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  miniodata:

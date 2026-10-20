@@ -1,0 +1,9 @@
+# Keep LF everywhere: shell scripts and files copied into Linux containers break with CRLF.
+* text=auto eol=lf
+
+*.png binary
+*.webp binary
+*.jpg binary
+*.glb binary
+*.hdr binary
+*.ico binary

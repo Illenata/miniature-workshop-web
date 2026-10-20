@@ -1,0 +1,30 @@
+{
+  "name": "miniature-workshop-web",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "packageManager": "npm@10.9.8",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "npm run db:generate -w @mw/api",
+    "seed": "npm run seed -w @mw/api --"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "drizzle-kit": "0.31.11",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.15",
+    "turbo": "2.11.9",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}
