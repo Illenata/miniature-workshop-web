@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { Link } from "react-router";
 import { useT } from "../lib/i18n";
-import { useModelSlot } from "../lib/model-slots";
+import { markModelSettled, useModelSlot } from "../lib/model-slots";
 import { usePrefersReducedMotion } from "../lib/model-viewer";
 import type { Tile } from "../lib/tiles";
 import type { ViewMode } from "../lib/view-mode";
@@ -28,8 +28,22 @@ type Props = {
 export function MiniatureTile({ tile, mode, priority }: Props) {
   const t = useT();
   const mediaRef = useRef<HTMLDivElement>(null);
-  const hasModelSlot = useModelSlot(tile.id, mediaRef, mode === "3d");
+  const modelState = useModelSlot(tile.id, mediaRef, mode === "3d");
   const reducedMotion = usePrefersReducedMotion();
+  // model-viewer fires "load" or "error" once the glb is in; that frees a download slot.
+  const viewerRef = useCallback(
+    (el: HTMLElement | null) => {
+      if (!el) return;
+      const settle = () => markModelSettled(tile.id);
+      el.addEventListener("load", settle, { once: true });
+      el.addEventListener("error", settle, { once: true });
+      return () => {
+        el.removeEventListener("load", settle);
+        el.removeEventListener("error", settle);
+      };
+    },
+    [tile.id],
+  );
 
   const workshop = tile.ownerName
     ? t("workshop.named", { name: tile.ownerName })
@@ -39,9 +53,10 @@ export function MiniatureTile({ tile, mode, priority }: Props) {
     <li>
       <Link to={`/m/${tile.id}`} prefetch="none" className="group block rounded-lg">
         <div ref={mediaRef} className="relative aspect-[3/4] overflow-hidden rounded-lg bg-raised">
-          {hasModelSlot ? (
+          {modelState !== "poster" ? (
             // In a tile: slow turntable, no camera controls; a tap opens the miniature page.
             <model-viewer
+              ref={viewerRef}
               src={tile.glb}
               poster={tile.thumb800}
               alt={tile.title}
