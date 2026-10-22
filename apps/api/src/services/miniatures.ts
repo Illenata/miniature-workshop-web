@@ -1,5 +1,5 @@
-import { and, desc, eq, sql, type SQL } from "drizzle-orm";
-import type { Faction, MiniatureItem, MiniatureList } from "@mw/contract";
+import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
+import type { Faction, MiniatureItem, MiniatureList, Sort } from "@mw/contract";
 import type { Db } from "../db/client.ts";
 import { collections, miniatures, type MiniatureRow } from "../db/schema.ts";
 import { decodeCursor, encodeCursor, galleryScope } from "../lib/cursor.ts";
@@ -42,20 +42,70 @@ export function toItem(row: ListRow, urls: Urls): MiniatureItem {
   };
 }
 
+type Order = {
+  orderBy: SQL[];
+  /** Rows strictly after the cursor in this order. */
+  after: (key: string, id: string) => SQL;
+  /** Rejects keys that would make the query fail (e.g. a hand-made cursor with a bad date). */
+  validKey: (key: string) => boolean;
+  keyOf: (m: MiniatureRow) => string;
+};
+
 /**
- * Visible miniatures of active collections that are not opted out of the gallery,
- * newest first. Keyset pagination on (created_at, id): constant cost per page,
- * no skipped or repeated rows when new uploads arrive while someone scrolls.
+ * Titles mix English and Ukrainian, so they are compared with the "mw_title" ICU collation
+ * (migration 0001): Ukrainian letter order (Ґ after Г, Є after Е, І and Ї after И),
+ * Latin before Cyrillic, case-insensitive at first level. The expression matches the
+ * title indexes exactly, so the planner can use them.
+ */
+const TITLE = sql`(${miniatures.title} collate "mw_title")`;
+
+function dateOrder(dir: "asc" | "desc"): Order {
+  const op = sql.raw(dir === "desc" ? "<" : ">");
+  return {
+    orderBy: dir === "desc"
+      ? [desc(miniatures.createdAt), desc(miniatures.id)]
+      : [asc(miniatures.createdAt), asc(miniatures.id)],
+    after: (key, id) =>
+      sql`(${miniatures.createdAt}, ${miniatures.id}) ${op} (${key}::timestamptz, ${id})`,
+    validKey: (key) => /^\d{4}-\d{2}-\d{2}T/.test(key) && !Number.isNaN(Date.parse(key)),
+    keyOf: (m) => m.createdAt.toISOString(),
+  };
+}
+
+function titleOrder(dir: "asc" | "desc"): Order {
+  const op = sql.raw(dir === "desc" ? "<" : ">");
+  const d = sql.raw(dir);
+  return {
+    orderBy: [sql`${TITLE} ${d}`, dir === "desc" ? desc(miniatures.id) : asc(miniatures.id)],
+    after: (key, id) =>
+      sql`(${TITLE}, ${miniatures.id}) ${op} ((${key}::text collate "mw_title"), ${id})`,
+    validKey: () => true,
+    keyOf: (m) => m.title,
+  };
+}
+
+const ORDERS: Record<Sort, Order> = {
+  newest: dateOrder("desc"),
+  oldest: dateOrder("asc"),
+  title_asc: titleOrder("asc"),
+  title_desc: titleOrder("desc"),
+};
+
+/**
+ * Visible miniatures of active collections that are not opted out of the gallery.
+ * Keyset pagination on (sort key, id): constant cost per page, no skipped or
+ * repeated rows when new uploads arrive while someone scrolls.
  *
  * The status predicate is inlined (not a bind parameter) so the planner can always
  * match it to the partial indexes, including with generic prepared-statement plans.
  */
 export async function listGallery(
   db: Db,
-  opts: { faction?: Faction; cursor?: string; pageSize: number },
+  opts: { faction?: Faction; sort: Sort; cursor?: string; pageSize: number },
   urls: Urls,
 ): Promise<MiniatureList> {
-  const scope = galleryScope(opts.faction);
+  const scope = galleryScope(opts.faction, opts.sort);
+  const order = ORDERS[opts.sort];
   const where: SQL[] = [
     sql`${miniatures.status} = 'visible'`,
     sql`${collections.status} = 'active'`,
@@ -65,8 +115,8 @@ export async function listGallery(
 
   if (opts.cursor) {
     const c = decodeCursor(opts.cursor, scope);
-    if (!c) throw new HttpError("invalid_request", "Malformed cursor or cursor for another filter", { field: "cursor" });
-    where.push(sql`(${miniatures.createdAt}, ${miniatures.id}) < (${c.createdAt.toISOString()}::timestamptz, ${c.id})`);
+    if (!c || !order.validKey(c.key)) throw new HttpError("invalid_request", "Malformed cursor or cursor for another filter", { field: "cursor" });
+    where.push(order.after(c.key, c.id));
   }
 
   const rows = await db
@@ -74,7 +124,7 @@ export async function listGallery(
     .from(miniatures)
     .innerJoin(collections, eq(collections.id, miniatures.collectionId))
     .where(and(...where))
-    .orderBy(desc(miniatures.createdAt), desc(miniatures.id))
+    .orderBy(...order.orderBy)
     .limit(opts.pageSize + 1);
 
   const page = rows.slice(0, opts.pageSize);
@@ -84,7 +134,7 @@ export async function listGallery(
   return {
     items: page.map((r) => toItem(r, urls)),
     next_cursor:
-      hasMore && last ? encodeCursor({ createdAt: last.m.createdAt, id: last.m.id, scope }) : null,
+      hasMore && last ? encodeCursor({ key: order.keyOf(last.m), id: last.m.id, scope }) : null,
   };
 }
 

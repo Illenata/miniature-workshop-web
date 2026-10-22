@@ -43,9 +43,20 @@ export const miniatureListSchema = z.object({
 });
 export type MiniatureList = z.infer<typeof miniatureListSchema>;
 
+/**
+ * List order. Not in spec section 8 yet (an additive, optional parameter):
+ * newest is the default and matches the spec's "newest first".
+ * Titles sort alphabetically across languages (Latin and Cyrillic), case-insensitively.
+ */
+export const SORTS = ["newest", "oldest", "title_asc", "title_desc"] as const;
+export const sortSchema = z.enum(SORTS);
+export type Sort = z.infer<typeof sortSchema>;
+export const DEFAULT_SORT: Sort = "newest";
+
 /** Query of GET /api/v1/gallery. No faction means "all". */
 export const galleryQuerySchema = z.object({
-  cursor: z.string().max(256).optional(),
+  cursor: z.string().max(512).optional(),
   faction: factionSchema.optional(),
+  sort: sortSchema.default(DEFAULT_SORT),
 });
 export type GalleryQuery = z.infer<typeof galleryQuerySchema>;

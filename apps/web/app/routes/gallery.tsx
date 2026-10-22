@@ -1,21 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLocation } from "react-router";
-import { factionSchema, type Faction } from "@mw/contract";
+import { DEFAULT_SORT, type Faction, type Sort } from "@mw/contract";
 import type { Route } from "./+types/gallery";
 import { FactionFilter } from "../components/FactionFilter";
+import { SortSelect } from "../components/SortSelect";
 import { ViewModeToggle } from "../components/ViewModeToggle";
 import { MiniatureTile } from "../components/MiniatureTile";
 import { fetchGalleryPage } from "../lib/api.server";
+import { parseGalleryParams } from "../lib/gallery-params";
 import { isHydrated } from "../lib/hydration";
 import { isLang, translate, useT } from "../lib/i18n";
 import { loadModelViewer } from "../lib/model-viewer";
 import { useViewMode } from "../lib/view-mode";
 import type { TilePage } from "../lib/tiles";
-
-function parseFaction(value: string | null): Faction | undefined {
-  const parsed = factionSchema.safeParse(value);
-  return parsed.success ? parsed.data : undefined;
-}
 
 /**
  * First page is rendered on the server. "Show more" calls this same loader with
@@ -23,18 +20,18 @@ function parseFaction(value: string | null): Faction | undefined {
  */
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  const faction = parseFaction(url.searchParams.get("faction"));
+  const { faction, sort } = parseGalleryParams(url.searchParams);
   const cursor = url.searchParams.get("cursor") ?? undefined;
 
   if (!cursor) {
-    return { faction, page: await fetchGalleryPage({ faction }), failed: false };
+    return { faction, sort, page: await fetchGalleryPage({ faction, sort }), failed: false };
   }
   try {
-    return { faction, page: await fetchGalleryPage({ faction, cursor }), failed: false };
+    return { faction, sort, page: await fetchGalleryPage({ faction, sort, cursor }), failed: false };
   } catch (err) {
     // A failed "Show more" must not replace the whole gallery with an error page.
     console.error(err);
-    return { faction, page: { tiles: [], nextCursor: cursor } satisfies TilePage, failed: true };
+    return { faction, sort, page: { tiles: [], nextCursor: cursor } satisfies TilePage, failed: true };
   }
 }
 
@@ -79,9 +76,9 @@ function writeCached(historyKey: string, page: TilePage) {
   }
 }
 
-type ViewProps = { historyKey: string; faction: Faction | undefined; page: TilePage };
+type ViewProps = { historyKey: string; faction: Faction | undefined; sort: Sort; page: TilePage };
 
-function GalleryView({ historyKey, faction, page }: ViewProps) {
+function GalleryView({ historyKey, faction, sort, page }: ViewProps) {
   const t = useT();
   const [state, setState] = useState<TilePage>(() => readCached(historyKey) ?? page);
   const [announcement, setAnnouncement] = useState("");
@@ -116,14 +113,15 @@ function GalleryView({ historyKey, faction, page }: ViewProps) {
 
   return (
     <div className="mx-auto max-w-screen-2xl px-4 pb-16 pt-5">
-      {/* Phones: title and Card/3D on one row, filter below. Wider: all on one row. */}
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <h1 className="mr-auto text-xl font-semibold tracking-tight sm:text-2xl">{t("gallery.title")}</h1>
-        <div className="order-3 w-full sm:order-2 sm:w-auto">
-          <FactionFilter current={faction} />
-        </div>
-        <div className="order-2 sm:order-3">
+      {/* Title and Card/3D on top; filter and order below, wrapping on narrow phones. */}
+      <div className="mb-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t("gallery.title")}</h1>
           <ViewModeToggle />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FactionFilter current={faction} sort={sort} />
+          <SortSelect faction={faction} sort={sort} />
         </div>
       </div>
 
@@ -147,6 +145,7 @@ function GalleryView({ historyKey, faction, page }: ViewProps) {
           // A real GET form: without JS it navigates to the next page; with JS the fetcher appends it.
           <fetcher.Form method="get" action="/gallery">
             {faction && <input type="hidden" name="faction" value={faction} />}
+            {sort !== DEFAULT_SORT && <input type="hidden" name="sort" value={sort} />}
             <input type="hidden" name="cursor" value={state.nextCursor} />
             <button
               type="submit"

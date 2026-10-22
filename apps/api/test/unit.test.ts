@@ -17,22 +17,26 @@ describe("public ids", () => {
 });
 
 describe("cursor", () => {
-  const c = { createdAt: new Date("2026-10-20T18:44:59.042Z"), id: "b8nq2w5r7ycd" };
+  const c = { key: "2026-10-20T18:44:59.042Z", id: "b8nq2w5r7ycd" };
 
-  it("round-trips with millisecond precision", () => {
-    const scope = galleryScope("painted");
+  it("round-trips date and title keys", () => {
+    const scope = galleryScope("painted", "newest");
     expect(decodeCursor(encodeCursor({ ...c, scope }), scope)).toEqual({ ...c, scope });
+    const titleScope = galleryScope(undefined, "title_asc");
+    const t = { key: "Лучник степу 🎨", id: c.id, scope: titleScope };
+    expect(decodeCursor(encodeCursor(t), titleScope)).toEqual(t);
   });
 
-  it("is rejected for another filter", () => {
-    const raw = encodeCursor({ ...c, scope: galleryScope("painted") });
-    expect(decodeCursor(raw, galleryScope(undefined))).toBeNull();
-    expect(decodeCursor(raw, collectionScope("7k3m9q2vx4ht"))).toBeNull();
+  it("is rejected for another filter or order", () => {
+    const raw = encodeCursor({ ...c, scope: galleryScope("painted", "newest") });
+    expect(decodeCursor(raw, galleryScope(undefined, "newest"))).toBeNull();
+    expect(decodeCursor(raw, galleryScope("painted", "oldest"))).toBeNull();
+    expect(decodeCursor(raw, collectionScope("7k3m9q2vx4ht", "newest"))).toBeNull();
   });
 
   it("returns null for garbage", () => {
-    for (const raw of ["", "garbage", "e30", Buffer.from('{"t":1}').toString("base64url")]) {
-      expect(decodeCursor(raw, galleryScope(undefined))).toBeNull();
+    for (const raw of ["", "garbage", "e30", Buffer.from('{"k":1}').toString("base64url")]) {
+      expect(decodeCursor(raw, galleryScope(undefined, "newest"))).toBeNull();
     }
   });
 });

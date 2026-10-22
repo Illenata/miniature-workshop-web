@@ -106,6 +106,13 @@ export const miniatures = pgTable(
       .on(t.faction, t.createdAt, t.id)
       .where(sql`${t.status} = 'visible'`),
     index("miniatures_collection_idx").on(t.collectionId, t.createdAt, t.id),
+    // Title orders (A-Z and Z-A); the expression must match services/miniatures.ts exactly.
+    index("miniatures_gallery_title_idx")
+      .on(sql`(${t.title} collate "mw_title")`, t.id)
+      .where(sql`${t.status} = 'visible'`),
+    index("miniatures_gallery_faction_title_idx")
+      .on(t.faction, sql`(${t.title} collate "mw_title")`, t.id)
+      .where(sql`${t.status} = 'visible'`),
   ],
 );
 

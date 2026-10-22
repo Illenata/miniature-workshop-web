@@ -1,5 +1,6 @@
 import { Link } from "react-router";
-import type { Faction } from "@mw/contract";
+import type { Faction, Sort } from "@mw/contract";
+import { galleryHref } from "../lib/gallery-params";
 import { useT } from "../lib/i18n";
 
 const OPTIONS = [
@@ -9,7 +10,7 @@ const OPTIONS = [
 ] as const;
 
 /** Plain links: the filter lives in the URL (?faction=), so it is shareable and works without JS. */
-export function FactionFilter({ current }: { current: Faction | undefined }) {
+export function FactionFilter({ current, sort }: { current: Faction | undefined; sort: Sort }) {
   const t = useT();
   return (
     <nav aria-label={t("gallery.filterLabel")}>
@@ -19,9 +20,8 @@ export function FactionFilter({ current }: { current: Faction | undefined }) {
           return (
             <li key={o.key}>
               <Link
-                to={o.value ? `/gallery?faction=${o.value}` : "/gallery"}
+                to={galleryHref({ faction: o.value, sort })}
                 aria-current={active ? "page" : undefined}
-                preventScrollReset={false}
                 className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm ${
                   active
                     ? "border-ink bg-ink text-surface font-medium"

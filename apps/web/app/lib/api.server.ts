@@ -1,4 +1,4 @@
-import type { Faction, MiniatureItem, MiniatureList } from "@mw/contract";
+import { DEFAULT_SORT, type Faction, type MiniatureItem, type MiniatureList, type Sort } from "@mw/contract";
 import { env } from "./env.server";
 import type { Tile, TilePage } from "./tiles";
 
@@ -38,9 +38,14 @@ async function getJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function fetchGalleryPage(opts: { faction?: Faction; cursor?: string }): Promise<TilePage> {
+export async function fetchGalleryPage(opts: {
+  faction?: Faction;
+  sort: Sort;
+  cursor?: string;
+}): Promise<TilePage> {
   const params = new URLSearchParams();
   if (opts.faction) params.set("faction", opts.faction);
+  if (opts.sort !== DEFAULT_SORT) params.set("sort", opts.sort);
   if (opts.cursor) params.set("cursor", opts.cursor);
   const qs = params.size ? `?${params}` : "";
   const page = await getJson<MiniatureList>(`/api/v1/gallery${qs}`);

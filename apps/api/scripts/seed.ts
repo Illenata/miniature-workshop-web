@@ -52,6 +52,8 @@ const int = (min: number, max: number) => min + Math.floor(rand() * (max - min +
 
 const ADJECTIVES = ["Steppe", "Iron", "Gilded", "Ash", "Crimson", "Quiet", "Old", "Northern", "Salt", "Amber", "Broken", "Hollow"];
 const NOUNS = ["Archer", "Sentinel", "Herald", "Pikeman", "Scout", "Warden", "Banner Bearer", "Duelist", "Monk", "Sapper", "Rider", "Captain"];
+// Some Ukrainian titles, so title sorting is exercised across Latin and Cyrillic.
+const UK_TITLES = ["Лучник степу", "Залізний вартовий", "Ґрафський герольд", "Єгер", "Їжак-розвідник", "Іскра", "арбалетник", "Вартовий"];
 const OWNERS = ["Taras", "Olena", "mini_dad", "BrushGoblin", "Kateryna", "SlowPainter", "Yurii", "PaintPotato", "Marta", null];
 const KITS = [
   { id: "kit_bowmen", name: "Bowmen" },
@@ -192,7 +194,7 @@ async function main() {
         id: mid,
         collectionId: cid,
         miniatureGuid: randomUUID(),
-        title: `${pick(ADJECTIVES)} ${pick(NOUNS)}`,
+        title: rand() < 0.15 ? pick(UK_TITLES) : `${pick(ADJECTIVES)} ${pick(NOUNS)}`,
         description: pick(DESCRIPTIONS),
         faction,
         parts,
