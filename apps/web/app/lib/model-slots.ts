@@ -61,10 +61,14 @@ function notify() {
 
 function recompute() {
   budget ??= computeBudget();
-  const next = new Set([...slots].filter((id) => near.has(id)));
-  for (const id of [...visible].sort(inDocumentOrder)) {
-    if (next.size >= budget) break;
-    next.add(id);
+  // Visible tiles come first; tiles just off screen keep their model only while there is
+  // room left, so they never block a tile the user is looking at.
+  const onScreen = [...visible].sort(inDocumentOrder);
+  const next = new Set<string>();
+  for (const id of onScreen) if (next.size < budget && slots.has(id)) next.add(id);
+  for (const id of onScreen) if (next.size < budget) next.add(id);
+  for (const id of [...slots].filter((x) => near.has(x)).sort(inDocumentOrder)) {
+    if (next.size < budget) next.add(id);
   }
   for (const id of slots) {
     if (!next.has(id)) {
