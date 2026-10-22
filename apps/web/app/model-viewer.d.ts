@@ -17,6 +17,13 @@ type ModelViewerAttributes = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTML
   "shadow-intensity"?: number | string;
   "shadow-softness"?: number | string;
   exposure?: number | string;
+  "min-camera-orbit"?: string;
+  "max-camera-orbit"?: string;
+  "touch-action"?: "pan-y" | "pan-x" | "none";
+  ar?: boolean;
+  "ar-modes"?: string;
+  "ar-scale"?: "auto" | "fixed";
+  "ar-placement"?: "floor" | "wall";
 };
 
 declare module "react" {

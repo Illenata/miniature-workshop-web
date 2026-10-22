@@ -158,3 +158,38 @@ export async function isServable(db: Db, collectionId: string, miniatureId: stri
     .limit(1);
   return rows.length > 0;
 }
+
+export type MiniatureLookup =
+  | { kind: "ok"; item: MiniatureItem }
+  | { kind: "hidden" } // hidden, removed, or its collection is banned
+  | { kind: "missing" };
+
+/**
+ * One miniature by public id (GET /api/v1/miniatures/{id}). With `countView`, the page
+ * view counter goes up by one first (spec section 6: +1 per page load, no dedup).
+ */
+export async function getMiniature(
+  db: Db,
+  id: string,
+  urls: Urls,
+  opts: { countView: boolean },
+): Promise<MiniatureLookup> {
+  const [row] = await db
+    .select({ ...listColumns, collectionStatus: collections.status })
+    .from(miniatures)
+    .innerJoin(collections, eq(collections.id, miniatures.collectionId))
+    .where(eq(miniatures.id, id))
+    .limit(1);
+  if (!row) return { kind: "missing" };
+  if (row.m.status !== "visible" || row.collectionStatus !== "active") return { kind: "hidden" };
+
+  if (opts.countView) {
+    const [updated] = await db
+      .update(miniatures)
+      .set({ views: sql`${miniatures.views} + 1` })
+      .where(eq(miniatures.id, id))
+      .returning({ views: miniatures.views });
+    if (updated) row.m.views = updated.views;
+  }
+  return { kind: "ok", item: toItem(row, urls) };
+}

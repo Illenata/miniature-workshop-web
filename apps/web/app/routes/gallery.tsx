@@ -8,6 +8,7 @@ import { ViewModeToggle } from "../components/ViewModeToggle";
 import { MiniatureTile } from "../components/MiniatureTile";
 import { fetchGalleryPage } from "../lib/api.server";
 import { parseGalleryParams } from "../lib/gallery-params";
+import { detectLang } from "../lib/i18n.server";
 import { isHydrated } from "../lib/hydration";
 import { isLang, translate, useT } from "../lib/i18n";
 import { loadModelViewer } from "../lib/model-viewer";
@@ -22,12 +23,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const { faction, sort } = parseGalleryParams(url.searchParams);
   const cursor = url.searchParams.get("cursor") ?? undefined;
+  const lang = detectLang(request);
 
   if (!cursor) {
-    return { faction, sort, page: await fetchGalleryPage({ faction, sort }), failed: false };
+    return { faction, sort, page: await fetchGalleryPage({ faction, sort, lang }), failed: false };
   }
   try {
-    return { faction, sort, page: await fetchGalleryPage({ faction, sort, cursor }), failed: false };
+    return { faction, sort, page: await fetchGalleryPage({ faction, sort, cursor, lang }), failed: false };
   } catch (err) {
     // A failed "Show more" must not replace the whole gallery with an error page.
     console.error(err);

@@ -19,7 +19,11 @@ import { useNonce } from "./lib/nonce";
 import "./app.css";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  return { lang: detectLang(request), filesOrigin: env.filesOrigin };
+  return {
+    lang: detectLang(request),
+    filesOrigin: env.filesOrigin,
+    links: { steam: env.steamStoreUrl, discord: env.discordUrl },
+  };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {

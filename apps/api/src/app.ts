@@ -5,6 +5,7 @@ import { HttpError } from "./lib/errors.ts";
 import { filesRoutes } from "./routes/files.ts";
 import { galleryRoutes } from "./routes/gallery.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { miniatureRoutes } from "./routes/miniatures.ts";
 import type { Storage } from "./storage/storage.ts";
 
 export type AppDeps = { config: Config; db: Db; storage: Storage };
@@ -57,6 +58,7 @@ export async function buildApp(deps: AppDeps) {
 
   await app.register(healthRoutes, deps);
   await app.register(galleryRoutes, deps);
+  await app.register(miniatureRoutes, deps);
   await app.register(filesRoutes, deps);
 
   return app;

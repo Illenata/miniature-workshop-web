@@ -102,6 +102,9 @@ export function MiniatureTile({ tile, mode, priority }: Props) {
             {tile.faction && <span aria-hidden="true">·</span>}
             <span className="truncate">{workshop}</span>
           </p>
+          <p className="mt-0.5 text-xs text-muted">
+            <time dateTime={tile.createdAt}>{tile.published}</time>
+          </p>
         </div>
       </Link>
     </li>

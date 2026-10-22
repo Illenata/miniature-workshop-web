@@ -40,3 +40,10 @@ export const apiErrorSchema = z.object({
   retry_after: z.int().optional(),
 });
 export type ApiError = z.infer<typeof apiErrorSchema>;
+
+/**
+ * `message` of the 404 for a miniature that exists but is hidden, removed or in a banned
+ * collection, so the page can say "This miniature was hidden" (spec section 4) instead of
+ * a generic "not found". The error code stays not_found.
+ */
+export const MINIATURE_HIDDEN_MESSAGE = "Miniature is hidden";
