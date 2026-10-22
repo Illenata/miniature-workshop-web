@@ -6,9 +6,11 @@ import { filesRoutes } from "./routes/files.ts";
 import { galleryRoutes } from "./routes/gallery.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { miniatureRoutes } from "./routes/miniatures.ts";
+import { reportRoutes } from "./routes/reports.ts";
+import type { ModeratorNotifier } from "./services/notifier.ts";
 import type { Storage } from "./storage/storage.ts";
 
-export type AppDeps = { config: Config; db: Db; storage: Storage };
+export type AppDeps = { config: Config; db: Db; storage: Storage; notifier: ModeratorNotifier };
 
 /**
  * Logs are JSON without personal data (spec section 3): requests are logged by
@@ -29,7 +31,8 @@ function loggerOptions(config: Config): FastifyServerOptions["logger"] {
 export async function buildApp(deps: AppDeps) {
   const app = Fastify({
     logger: loggerOptions(deps.config),
-    trustProxy: true,
+    // Only the reverse proxy and the page server (private networks) may set X-Forwarded-For.
+    trustProxy: deps.config.TRUST_PROXY.split(",").map((s) => s.trim()).filter(Boolean),
     // Spec section 5: server-side request timeout 120 s.
     requestTimeout: 120_000,
   });
@@ -59,6 +62,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(healthRoutes, deps);
   await app.register(galleryRoutes, deps);
   await app.register(miniatureRoutes, deps);
+  await app.register(reportRoutes, deps);
   await app.register(filesRoutes, deps);
 
   return app;

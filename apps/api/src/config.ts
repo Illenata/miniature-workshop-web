@@ -29,6 +29,21 @@ const configSchema = z.object({
   FILES_BASE_URL: url,
 
   GALLERY_PAGE_SIZE: z.coerce.number().int().min(1).max(100).default(24),
+  REPORTS_PER_IP_PER_DAY: z.coerce.number().int().min(1).default(10),
+  AUTO_HIDE_REPORTS: z.coerce.number().int().min(1).default(3),
+
+  /** Secret salt for hashing IPs (spec section 3: IPs are stored only as salted hashes). */
+  IP_HASH_SALT: z.string().min(16),
+  /**
+   * Which direct peers may set X-Forwarded-For: the reverse proxy and the page server.
+   * Default: loopback and private networks (docker), never the public internet.
+   */
+  TRUST_PROXY: z.string().default("loopback,linklocal,uniquelocal"),
+
+  /** Moderator email (spec section 7). Empty SMTP_URL or MODERATOR_EMAIL: no email, only logs. */
+  SMTP_URL: z.string().optional().transform((v) => v?.trim() || undefined),
+  MAIL_FROM: z.string().default("Miniature Workshop <noreply@localhost>"),
+  MODERATOR_EMAIL: z.string().optional().transform((v) => v?.trim() || undefined),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -41,3 +56,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   return result.data;
 }
+
+/** The value shipped in .env.example; the server warns at startup while it is in use. */
+export const EXAMPLE_SALT = "local-dev-only-change-me-in-production";

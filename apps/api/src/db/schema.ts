@@ -23,6 +23,9 @@ const createdAt = () =>
 export const collectionStatus = pgEnum("collection_status", ["active", "banned"]);
 export const miniatureStatus = pgEnum("miniature_status", ["visible", "hidden", "removed"]);
 export const faction = pgEnum("faction", ["painted", "gilded"]);
+export const hiddenReason = pgEnum("hidden_reason", ["reports", "moderator"]);
+export const reportReason = pgEnum("report_reason", ["offensive", "spam", "stolen", "other"]);
+export const reportStatus = pgEnum("report_status", ["open", "resolved"]);
 
 export const collections = pgTable("collections", {
   id: varchar({ length: 12 }).primaryKey(),
@@ -88,6 +91,8 @@ export const miniatures = pgTable(
     paintedAt: timestamp({ withTimezone: true, precision: 3 }),
     files: jsonb().$type<MiniatureFiles>().notNull(),
     status: miniatureStatus().notNull().default("visible"),
+    /** Why it is hidden: auto-hidden by reports (waits for the moderator) or by the moderator. */
+    hiddenReason: hiddenReason(),
     views: bigint({ mode: "number" }).notNull().default(0),
     createdAt: createdAt(),
     updatedAt: createdAt(),
@@ -115,6 +120,37 @@ export const miniatures = pgTable(
       .where(sql`${t.status} = 'visible'`),
   ],
 );
+
+/** Spec section 4 (Report) and 7. The IP is stored only as a salted hash. */
+export const reports = pgTable(
+  "reports",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    miniatureId: varchar({ length: 12 })
+      .notNull()
+      .references(() => miniatures.id, { onDelete: "cascade" }),
+    reason: reportReason().notNull(),
+    text: varchar({ length: 300 }).notNull().default(""),
+    ipHash: varchar({ length: 64 }).notNull(),
+    status: reportStatus().notNull().default("open"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    // One IP, one open report per miniature (spec section 7).
+    uniqueIndex("reports_one_open_per_ip").on(t.miniatureId, t.ipHash).where(sql`${t.status} = 'open'`),
+    // Daily limit per IP.
+    index("reports_ip_recent_idx").on(t.ipHash, t.createdAt),
+    // Moderation queue and notification digests.
+    index("reports_created_idx").on(t.createdAt),
+  ],
+);
+
+/** Small durable key/value state (e.g. when the last moderator email went out). */
+export const appState = pgTable("app_state", {
+  key: varchar({ length: 64 }).primaryKey(),
+  value: jsonb().notNull(),
+  updatedAt: createdAt(),
+});
 
 export type CollectionRow = typeof collections.$inferSelect;
 export type MiniatureRow = typeof miniatures.$inferSelect;

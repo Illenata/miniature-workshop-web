@@ -81,3 +81,34 @@ export async function fetchGalleryPage(opts: {
   const page = await getJson<MiniatureList>(`/api/v1/gallery${qs}`);
   return { tiles: page.items.map((i) => toTile(i, opts.lang)), nextCursor: page.next_cursor };
 }
+
+export type ReportResult = { kind: "ok" } | { kind: "rate_limited" } | { kind: "not_found" } | { kind: "invalid"; field: string };
+
+/**
+ * Sends a report on behalf of the visitor. Behind the reverse proxy, X-Forwarded-For
+ * carries the visitor's address; it is passed on so the API's per-IP limits apply to the
+ * visitor, not to this server. (The API only trusts that header from private networks.)
+ */
+export async function postReport(
+  body: { miniature_id: string; reason: string; text: string },
+  forwardedFor: string | null,
+): Promise<ReportResult> {
+  const res = await fetch(`${env.apiUrl}/api/v1/reports`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5000),
+  });
+  if (res.status === 201) return { kind: "ok" };
+  if (res.status === 429) return { kind: "rate_limited" };
+  if (res.status === 404) return { kind: "not_found" };
+  if (res.status === 400) {
+    const err = (await res.json().catch(() => ({}))) as { field?: string };
+    return { kind: "invalid", field: err.field ?? "" };
+  }
+  throw new ApiRequestError(res.status, "unknown", await res.text().catch(() => ""));
+}

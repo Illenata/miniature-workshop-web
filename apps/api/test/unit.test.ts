@@ -7,6 +7,7 @@ import { TtlCache } from "../src/lib/ttl-cache.ts";
 import { deriveFromCard } from "../src/media/derivatives.ts";
 import { objectKey } from "../src/storage/storage.ts";
 import { placeholderCard, placeholderGlb } from "../scripts/placeholders.ts";
+import { hashIp } from "../src/lib/ip-hash.ts";
 
 describe("public ids", () => {
   it("are valid and do not repeat", () => {
@@ -95,5 +96,15 @@ describe("placeholder glb", () => {
     expect(gltf.materials).toHaveLength(1);
     // About 3 cm tall, like a real miniature.
     expect(gltf.accessors[0].max[1]).toBeCloseTo(0.027);
+  });
+});
+
+
+describe("IP hashing", () => {
+  it("is stable per salt and never contains the IP", () => {
+    const a = hashIp("203.0.113.7", "salt-one-0123456789");
+    expect(a).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashIp("203.0.113.7", "salt-one-0123456789")).toBe(a);
+    expect(hashIp("203.0.113.7", "salt-two-0123456789")).not.toBe(a);
   });
 });

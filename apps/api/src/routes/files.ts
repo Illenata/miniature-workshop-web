@@ -18,6 +18,18 @@ export const VISIBILITY_TTL_MS = 30_000;
 export async function filesRoutes(app: FastifyInstance, deps: AppDeps) {
   const visibility = new TtlCache<boolean>(VISIBILITY_TTL_MS, 20_000);
 
+  // CORS preflight: plain GETs from model-viewer need none, but a browser extension or a
+  // client adding headers would otherwise get the model blocked.
+  app.options("/files/collections/:cid/:mid/:name", async (_req, reply) =>
+    reply
+      .code(204)
+      .header("Access-Control-Allow-Origin", "*")
+      .header("Access-Control-Allow-Methods", "GET, HEAD")
+      .header("Access-Control-Allow-Headers", "*")
+      .header("Access-Control-Max-Age", "86400")
+      .send(),
+  );
+
   app.get<{ Params: { cid: string; mid: string; name: string } }>(
     "/files/collections/:cid/:mid/:name",
     async (req, reply) => {

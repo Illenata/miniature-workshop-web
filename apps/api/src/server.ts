@@ -1,7 +1,8 @@
 import { sql as rawSql } from "drizzle-orm";
 import { buildApp } from "./app.ts";
-import { loadConfig } from "./config.ts";
+import { EXAMPLE_SALT, loadConfig } from "./config.ts";
 import { createDb, runMigrations } from "./db/client.ts";
+import { ModeratorNotifier } from "./services/notifier.ts";
 import { Storage } from "./storage/storage.ts";
 
 const config = loadConfig();
@@ -30,10 +31,18 @@ await waitFor("database", () => db.execute(rawSql`select 1`));
 await runMigrations(db);
 await waitFor("storage", () => (config.S3_CREATE_BUCKET ? storage.ensureBucket() : storage.ping()));
 
-const app = await buildApp({ config, db, storage });
+const notifier = new ModeratorNotifier(db, config);
+const app = await buildApp({ config, db, storage, notifier });
+notifier.useLogger(app.log);
+// Reports that arrived while the server was down (or within the last hourly window).
+notifier.reportCreated();
+if (config.IP_HASH_SALT === EXAMPLE_SALT && config.NODE_ENV === "production") {
+  app.log.warn("IP_HASH_SALT is the example value from .env.example; set a random secret on a real server");
+}
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, "shutting down");
+  notifier.stop();
   await app.close();
   await sql.end({ timeout: 5 });
   process.exit(0);

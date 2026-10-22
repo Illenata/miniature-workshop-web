@@ -1,5 +1,5 @@
 import { isbot } from "isbot";
-import { data, isRouteErrorResponse, Link, useRouteLoaderData } from "react-router";
+import { data, Link, useRouteLoaderData, useSearchParams } from "react-router";
 import type { Route } from "./+types/miniature";
 import { MiniatureSpecs } from "../components/MiniatureSpecs";
 import { MiniatureViewer } from "../components/MiniatureViewer";
@@ -81,6 +81,8 @@ export default function MiniaturePage({ loaderData }: Route.ComponentProps) {
   const t = useT();
   const { item, text } = loaderData;
   const links = (useRouteLoaderData("root") as RootData | undefined)?.links;
+  const [search] = useSearchParams();
+  const reported = search.get("reported") === "1";
   const workshop = item.owner.name
     ? t("workshop.named", { name: item.owner.name })
     : t("workshop.anonymous", { id: item.owner.collection_id });
@@ -117,6 +119,12 @@ export default function MiniaturePage({ loaderData }: Route.ComponentProps) {
           <p className="mt-4 whitespace-pre-line text-base leading-relaxed">{item.description}</p>
         )}
 
+        {reported && (
+          <p role="status" className="mt-4 rounded-lg border border-line bg-raised px-4 py-3 text-sm">
+            {t("report.thanks")}
+          </p>
+        )}
+
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <ShareButton title={item.title} url={item.url} className={PRIMARY} />
         </div>
@@ -134,10 +142,9 @@ export default function MiniaturePage({ loaderData }: Route.ComponentProps) {
           <a href={`/m/${item.id}/model.glb`} download className={BUTTON}>
             {t("m.downloadGlb")}
           </a>
-          {/* Reports (spec section 7) arrive with POST /api/v1/reports; disabled until then. */}
-          <button type="button" disabled title={t("m.reportSoon")} className={`${BUTTON} cursor-not-allowed opacity-50`}>
+          <Link to={`/m/${item.id}/report`} rel="nofollow" className={BUTTON}>
             {t("m.report")}
-          </button>
+          </Link>
         </div>
 
         <MiniatureSpecs item={item} strokes={text.strokes} />
@@ -146,19 +153,4 @@ export default function MiniaturePage({ loaderData }: Route.ComponentProps) {
   );
 }
 
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const t = useT();
-  const hidden = isRouteErrorResponse(error) && (error.data as { hidden?: boolean } | null)?.hidden;
-  if (!isRouteErrorResponse(error)) console.error(error);
-  const titleKey = hidden ? "m.hiddenTitle" : isRouteErrorResponse(error) ? "error.notFoundTitle" : "error.genericTitle";
-  const textKey = hidden ? "m.hiddenText" : isRouteErrorResponse(error) ? "error.notFoundText" : "error.genericText";
-  return (
-    <div className="mx-auto max-w-xl px-4 py-16 text-center">
-      <h1 className="text-2xl font-semibold">{t(titleKey)}</h1>
-      <p className="mt-3 text-muted">{t(textKey)}</p>
-      <Link to="/gallery" className="mt-8 inline-block rounded-full bg-raised px-5 py-2.5 hover:bg-line">
-        {t("error.backToGallery")}
-      </Link>
-    </div>
-  );
-}
+export { MiniatureErrorBoundary as ErrorBoundary } from "../components/MiniatureErrorBoundary";

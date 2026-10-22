@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isPublicId, manifestSchema, PUBLIC_ID_ALPHABET } from "../src/index.ts";
+import { reportRequestSchema } from "../src/index.ts";
 
 // The example from spec appendix A.
 const example = {
@@ -84,5 +85,18 @@ describe("public ids", () => {
     expect(isPublicId("b8nq2w5r7yco")).toBe(false);
     expect(isPublicId("B8NQ2W5R7YCD")).toBe(false);
     expect(isPublicId("b8nq2w5r7yc")).toBe(false);
+  });
+});
+
+
+describe("report request", () => {
+  const base = { miniature_id: "b8nq2w5r7ycd", reason: "spam" };
+  it("accepts a reason without text", () => {
+    expect(reportRequestSchema.parse(base)).toEqual({ ...base, text: "" });
+  });
+  it("limits text to 300 characters and rejects unknown reasons", () => {
+    expect(reportRequestSchema.safeParse({ ...base, text: "я".repeat(300) }).success).toBe(true);
+    expect(reportRequestSchema.safeParse({ ...base, text: "я".repeat(301) }).success).toBe(false);
+    expect(reportRequestSchema.safeParse({ ...base, reason: "ugly" }).success).toBe(false);
   });
 });
