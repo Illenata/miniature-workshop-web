@@ -80,5 +80,17 @@
   "report.tooLong": "Задовго: не більше {max} символів.",
   "report.rateLimited": "Сьогодні з твоєї адреси вже надіслано забагато скарг. Спробуй завтра.",
   "report.failed": "Не вдалося надіслати скаргу. Спробуй ще раз.",
-  "report.thanks": "Дякуємо, скаргу надіслано модератору."
+  "report.thanks": "Дякуємо, скаргу надіслано модератору.",
+  "c.metaTitle": "{name} · Miniature Workshop",
+  "c.count.one": "{count} мініатюра",
+  "c.count.few": "{count} мініатюри",
+  "c.count.many": "{count} мініатюр",
+  "c.count.other": "{count} мініатюри",
+  "c.description": "{count}, пофарбовані в Miniature Workshop.",
+  "c.share": "Поділитися колекцією",
+  "c.qrShow": "QR-код",
+  "c.qrAlt": "QR-код з посиланням на цю колекцію",
+  "c.qrHint": "Наведи камеру телефона, щоб відкрити колекцію.",
+  "c.empty": "У цій майстерні поки немає мініатюр.",
+  "c.since": "З {date}"
 }

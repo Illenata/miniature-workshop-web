@@ -1,8 +1,8 @@
-import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { Faction, MiniatureItem, MiniatureList, Sort } from "@mw/contract";
 import type { Db } from "../db/client.ts";
 import { collections, miniatures, type MiniatureRow } from "../db/schema.ts";
-import { decodeCursor, encodeCursor, galleryScope } from "../lib/cursor.ts";
+import { collectionScope, decodeCursor, encodeCursor, galleryScope } from "../lib/cursor.ts";
 import { HttpError } from "../lib/errors.ts";
 
 export type Urls = { publicBaseUrl: string; filesBaseUrl: string };
@@ -92,30 +92,26 @@ const ORDERS: Record<Sort, Order> = {
 };
 
 /**
- * Visible miniatures of active collections that are not opted out of the gallery.
- * Keyset pagination on (sort key, id): constant cost per page, no skipped or
- * repeated rows when new uploads arrive while someone scrolls.
+ * One page of visible miniatures matching `filter`, in the given order. Keyset pagination
+ * on (sort key, id): constant cost per page, no skipped or repeated rows when new uploads
+ * arrive while someone scrolls. Cursors only work within the same `scope`.
  *
- * The status predicate is inlined (not a bind parameter) so the planner can always
- * match it to the partial indexes, including with generic prepared-statement plans.
+ * Status predicates are inlined (not bind parameters) so the planner can always match them
+ * to the partial indexes, including with generic prepared-statement plans.
  */
-export async function listGallery(
+async function listPage(
   db: Db,
-  opts: { faction?: Faction; sort: Sort; cursor?: string; pageSize: number },
+  opts: { filter: SQL[]; scope: string; sort: Sort; cursor?: string; pageSize: number },
   urls: Urls,
 ): Promise<MiniatureList> {
-  const scope = galleryScope(opts.faction, opts.sort);
   const order = ORDERS[opts.sort];
-  const where: SQL[] = [
-    sql`${miniatures.status} = 'visible'`,
-    sql`${collections.status} = 'active'`,
-    sql`${collections.hiddenFromGallery} = false`,
-  ];
-  if (opts.faction) where.push(eq(miniatures.faction, opts.faction));
+  const where: SQL[] = [sql`${miniatures.status} = 'visible'`, ...opts.filter];
 
   if (opts.cursor) {
-    const c = decodeCursor(opts.cursor, scope);
-    if (!c || !order.validKey(c.key)) throw new HttpError("invalid_request", "Malformed cursor or cursor for another filter", { field: "cursor" });
+    const c = decodeCursor(opts.cursor, opts.scope);
+    if (!c || !order.validKey(c.key)) {
+      throw new HttpError("invalid_request", "Malformed cursor or cursor for another filter", { field: "cursor" });
+    }
     where.push(order.after(c.key, c.id));
   }
 
@@ -134,7 +130,73 @@ export async function listGallery(
   return {
     items: page.map((r) => toItem(r, urls)),
     next_cursor:
-      hasMore && last ? encodeCursor({ key: order.keyOf(last.m), id: last.m.id, scope }) : null,
+      hasMore && last ? encodeCursor({ key: order.keyOf(last.m), id: last.m.id, scope: opts.scope }) : null,
+  };
+}
+
+/** Gallery: visible miniatures of active collections not opted out of the gallery. */
+export function listGallery(
+  db: Db,
+  opts: { faction?: Faction; sort: Sort; cursor?: string; pageSize: number },
+  urls: Urls,
+): Promise<MiniatureList> {
+  const filter: SQL[] = [
+    sql`${collections.status} = 'active'`,
+    sql`${collections.hiddenFromGallery} = false`,
+  ];
+  if (opts.faction) filter.push(eq(miniatures.faction, opts.faction));
+  return listPage(db, { ...opts, filter, scope: galleryScope(opts.faction, opts.sort) }, urls);
+}
+
+export type CollectionInfo = {
+  id: string;
+  url: string;
+  /** Raw owner_name; null means the page shows "Workshop #<id>". */
+  name: string | null;
+  miniature_count: number;
+  created_at: string;
+};
+
+export type CollectionLookup =
+  | { kind: "ok"; collection: CollectionInfo; page: MiniatureList }
+  | { kind: "missing" }; // also banned (spec section 6: banned or missing -> 404)
+
+/**
+ * A collection with one page of its visible miniatures (GET /api/v1/collections/{id}).
+ * Collections opted out of the gallery are still reachable by link (spec section 9).
+ */
+export async function getCollectionPage(
+  db: Db,
+  id: string,
+  opts: { sort: Sort; cursor?: string; pageSize: number },
+  urls: Urls,
+): Promise<CollectionLookup> {
+  const [c] = await db
+    .select({ id: collections.id, ownerName: collections.ownerName, createdAt: collections.createdAt })
+    .from(collections)
+    .where(and(eq(collections.id, id), sql`${collections.status} = 'active'`))
+    .limit(1);
+  if (!c) return { kind: "missing" };
+  const [visibleCount] = await db
+    .select({ n: count() })
+    .from(miniatures)
+    .where(and(eq(miniatures.collectionId, id), sql`${miniatures.status} = 'visible'`));
+
+  const page = await listPage(
+    db,
+    { ...opts, filter: [eq(miniatures.collectionId, id)], scope: collectionScope(id, opts.sort) },
+    urls,
+  );
+  return {
+    kind: "ok",
+    collection: {
+      id: c.id,
+      url: `${urls.publicBaseUrl}/c/${c.id}`,
+      name: c.ownerName,
+      miniature_count: visibleCount?.n ?? 0,
+      created_at: c.createdAt.toISOString(),
+    },
+    page,
   };
 }
 

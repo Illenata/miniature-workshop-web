@@ -60,3 +60,24 @@ export const galleryQuerySchema = z.object({
   sort: sortSchema.default(DEFAULT_SORT),
 });
 export type GalleryQuery = z.infer<typeof galleryQuerySchema>;
+
+/** Query of GET /api/v1/collections/{id}. */
+export const collectionQuerySchema = z.object({
+  cursor: z.string().max(512).optional(),
+  sort: sortSchema.default(DEFAULT_SORT),
+});
+
+/** Header data on GET /api/v1/collections/{id} (additive to `{ items, next_cursor }`). */
+export const collectionInfoSchema = z.object({
+  id: publicIdSchema,
+  url: z.url(),
+  /** Raw owner_name; null means the page shows "Workshop #<id>". */
+  name: z.string().nullable(),
+  /** Visible miniatures only. */
+  miniature_count: z.int(),
+  created_at: z.iso.datetime(),
+});
+export type CollectionInfo = z.infer<typeof collectionInfoSchema>;
+
+export const collectionPageSchema = miniatureListSchema.extend({ collection: collectionInfoSchema });
+export type CollectionPage = z.infer<typeof collectionPageSchema>;

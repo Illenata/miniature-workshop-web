@@ -80,5 +80,17 @@
   "report.tooLong": "Too long: at most {max} characters.",
   "report.rateLimited": "Too many reports from your address today. Please try again tomorrow.",
   "report.failed": "Could not send the report. Please try again.",
-  "report.thanks": "Thank you, the report was sent to the moderator."
+  "report.thanks": "Thank you, the report was sent to the moderator.",
+  "c.metaTitle": "{name} · Miniature Workshop",
+  "c.count.one": "{count} miniature",
+  "c.count.few": "{count} miniatures",
+  "c.count.many": "{count} miniatures",
+  "c.count.other": "{count} miniatures",
+  "c.description": "{count} painted in Miniature Workshop.",
+  "c.share": "Share collection",
+  "c.qrShow": "QR code",
+  "c.qrAlt": "QR code with the link to this collection",
+  "c.qrHint": "Point a phone camera at it to open the collection.",
+  "c.empty": "No miniatures in this workshop yet.",
+  "c.since": "Since {date}"
 }

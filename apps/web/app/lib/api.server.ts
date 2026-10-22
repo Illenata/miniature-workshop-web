@@ -1,4 +1,4 @@
-import { DEFAULT_SORT, MINIATURE_HIDDEN_MESSAGE, type Faction, type MiniatureItem, type MiniatureList, type Sort } from "@mw/contract";
+import { DEFAULT_SORT, MINIATURE_HIDDEN_MESSAGE, type CollectionInfo, type CollectionPage, type Faction, type MiniatureItem, type MiniatureList, type Sort } from "@mw/contract";
 import { env } from "./env.server";
 import { formatDate } from "./format";
 import type { Lang } from "./i18n";
@@ -111,4 +111,28 @@ export async function postReport(
     return { kind: "invalid", field: err.field ?? "" };
   }
   throw new ApiRequestError(res.status, "unknown", await res.text().catch(() => ""));
+}
+
+export type CollectionResult =
+  | { kind: "ok"; collection: CollectionInfo; page: TilePage; firstOgImage: string | null }
+  | { kind: "missing" };
+
+/** A collection and one page of its miniatures, newest first. Missing or banned: "missing". */
+export async function fetchCollectionPage(
+  id: string,
+  opts: { cursor?: string; lang: Lang },
+): Promise<CollectionResult> {
+  const qs = opts.cursor ? `?${new URLSearchParams({ cursor: opts.cursor })}` : "";
+  try {
+    const res = await getJson<CollectionPage>(`/api/v1/collections/${encodeURIComponent(id)}${qs}`);
+    return {
+      kind: "ok",
+      collection: res.collection,
+      page: { tiles: res.items.map((i) => toTile(i, opts.lang)), nextCursor: res.next_cursor },
+      firstOgImage: res.items[0]?.files.og ?? null,
+    };
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.status === 404) return { kind: "missing" };
+    throw err;
+  }
 }

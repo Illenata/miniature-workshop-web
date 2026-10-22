@@ -21,11 +21,13 @@ export const TILE_SIZES = [
 type Props = {
   tile: Tile;
   mode: ViewMode;
+  /** Off on a collection page, where every tile is from the same workshop. */
+  showWorkshop?: boolean;
   /** Above-the-fold tiles load immediately; the very first ones get high priority (LCP). */
   priority: "high" | "eager" | "lazy";
 };
 
-export function MiniatureTile({ tile, mode, priority }: Props) {
+export function MiniatureTile({ tile, mode, priority, showWorkshop = true }: Props) {
   const t = useT();
   const mediaRef = useRef<HTMLDivElement>(null);
   const modelState = useModelSlot(tile.id, mediaRef, mode === "3d");
@@ -99,8 +101,8 @@ export function MiniatureTile({ tile, mode, priority }: Props) {
                 {t(`faction.${tile.faction}`)}
               </span>
             )}
-            {tile.faction && <span aria-hidden="true">·</span>}
-            <span className="truncate">{workshop}</span>
+            {tile.faction && showWorkshop && <span aria-hidden="true">·</span>}
+            {showWorkshop && <span className="truncate">{workshop}</span>}
           </p>
           <p className="mt-0.5 text-xs text-muted">
             <time dateTime={tile.createdAt}>{tile.published}</time>

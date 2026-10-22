@@ -3,6 +3,8 @@ import { index, route, type RouteConfig } from "@react-router/dev/routes";
 export default [
   index("routes/home.tsx"),
   route("gallery", "routes/gallery.tsx"),
+  route("c/:id", "routes/collection.tsx"),
+  route("c/:id/qr.png", "routes/collection-qr.ts"),
   route("m/:id", "routes/miniature.tsx"),
   route("m/:id/report", "routes/miniature-report.tsx"),
   route("m/:id/qr.png", "routes/miniature-qr.ts"),
