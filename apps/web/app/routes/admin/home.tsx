@@ -1,5 +1,5 @@
 import type { Route } from "./+types/home";
-import { adminFetch, requireAdmin } from "../../lib/admin.server";
+import { adminFetch, kyivDateTime, requireAdmin } from "../../lib/admin.server";
 import { ADMIN_HEADERS } from "../../lib/admin-meta";
 
 export const headers = () => ADMIN_HEADERS;
@@ -10,19 +10,20 @@ const ACTION_NAMES: Record<string, string> = {
   login: "Вхід",
   login_failed: "Невдала спроба входу",
   logout: "Вихід",
+  hide_miniature: "Сховано мініатюру",
+  show_miniature: "Показано мініатюру",
 };
 
 export async function loader({ request }: Route.LoaderArgs) {
   const session = await requireAdmin(request);
   const res = await adminFetch("/actions?limit=10", { token: session.token });
   const body = res.ok ? ((await res.json()) as { items: Action[] }) : { items: [] };
-  const fmt = new Intl.DateTimeFormat("uk-UA", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Kyiv" });
   return {
     actions: body.items.map((a) => ({
       id: a.id,
       name: ACTION_NAMES[a.action] ?? a.action,
       target: a.target,
-      at: fmt.format(new Date(a.created_at)),
+      at: kyivDateTime(a.created_at),
       iso: a.created_at,
     })),
   };

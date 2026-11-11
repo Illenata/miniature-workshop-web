@@ -12,7 +12,11 @@ export default [
   route("m/:id/card.png", "routes/miniature-card.ts"),
   route("admin/login", "routes/admin/login.tsx"),
   route("admin/logout", "routes/admin/logout.ts"),
-  layout("routes/admin/layout.tsx", [route("admin", "routes/admin/home.tsx")]),
+  route("admin/miniatures/:id/thumb.webp", "routes/admin/miniature-thumb.ts"),
+  layout("routes/admin/layout.tsx", [
+    route("admin", "routes/admin/home.tsx"),
+    route("admin/miniatures", "routes/admin/miniatures.tsx"),
+  ]),
   route("lang", "routes/lang.ts"),
   route("*", "routes/not-found.tsx"),
 ] satisfies RouteConfig;

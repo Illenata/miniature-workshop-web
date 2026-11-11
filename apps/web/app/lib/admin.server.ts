@@ -79,3 +79,9 @@ export function assertSameOrigin(request: Request): void {
   const allowed = new Set([env.publicOrigin, new URL(request.url).origin]);
   if (!origin || !allowed.has(origin)) throw new Response("Forbidden", { status: 403 });
 }
+
+/** Dates in the admin panel: the moderator works in Kyiv time. Formatted on the server only. */
+const KYIV = new Intl.DateTimeFormat("uk-UA", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Kyiv" });
+export function kyivDateTime(iso: string): string {
+  return KYIV.format(new Date(iso));
+}

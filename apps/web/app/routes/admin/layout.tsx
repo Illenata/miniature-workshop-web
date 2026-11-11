@@ -16,7 +16,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 /** Sections arrive step by step; the ones not built yet are listed but not linked. */
-const SOON = ["Мініатюри", "Скарги", "Колекції", "Стоп-слова", "Статистика", "Журнал"];
+const SECTIONS: { name: string; to?: string }[] = [
+  { name: "Мініатюри", to: "/admin/miniatures" },
+  { name: "Скарги" },
+  { name: "Колекції" },
+  { name: "Стоп-слова" },
+  { name: "Статистика" },
+  { name: "Журнал" },
+];
 
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   return (
@@ -36,11 +43,17 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           </div>
           {/* One row that scrolls sideways on a phone instead of wrapping into a column. */}
           <nav aria-label="Розділи" className="-mx-4 flex gap-5 overflow-x-auto px-4 pb-3 text-sm whitespace-nowrap text-muted">
-            {SOON.map((name) => (
-              <span key={name} aria-disabled="true" title="Скоро" className="opacity-50">
-                {name}
-              </span>
-            ))}
+            {SECTIONS.map(({ name, to }) =>
+              to ? (
+                <NavLink key={name} to={to} className={({ isActive }) => (isActive ? "text-ink" : "hover:text-ink")}>
+                  {name}
+                </NavLink>
+              ) : (
+                <span key={name} aria-disabled="true" title="Скоро" className="opacity-50">
+                  {name}
+                </span>
+              ),
+            )}
           </nav>
         </div>
       </header>

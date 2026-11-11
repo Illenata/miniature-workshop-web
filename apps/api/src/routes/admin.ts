@@ -1,8 +1,16 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
+import { isPublicId } from "@mw/contract";
 import type { AppDeps } from "../app.ts";
 import { hashIp } from "../lib/ip-hash.ts";
 import { AdminAuth } from "../services/admin-auth.ts";
+import {
+  ADMIN_STATUS_FILTERS,
+  adminThumbKey,
+  hideMiniature,
+  listAdminMiniatures,
+  showMiniature,
+} from "../services/admin-miniatures.ts";
 
 const loginSchema = z.object({
   password: z.string().min(1).max(256),
@@ -64,6 +72,32 @@ export async function adminRoutes(app: FastifyInstance, deps: AppDeps) {
     secured.post("/internal/admin/logout", async (req, reply) => {
       await auth.logout(bearer(req));
       return reply.code(204).send();
+    });
+
+    secured.get<{ Querystring: { status?: string; cursor?: string } }>("/internal/admin/miniatures", async (req) => {
+      const status = ADMIN_STATUS_FILTERS.find((s) => s === req.query.status) ?? "all";
+      return listAdminMiniatures(deps.db, { status, cursor: req.query.cursor });
+    });
+
+    for (const [verb, run] of [["hide", hideMiniature], ["show", showMiniature]] as const) {
+      secured.post<{ Params: { id: string } }>(`/internal/admin/miniatures/:id/${verb}`, async (req, reply) => {
+        if (!isPublicId(req.params.id)) return reply.code(404).send({ error: "not_found" });
+        const result = await run(deps.db, req.params.id);
+        if (result === "not_found") return reply.code(404).send({ error: "not_found" });
+        // Already in that state (double click, or changed meanwhile): tell the page to refresh.
+        if (result === "wrong_state") return reply.code(409).send({ error: "wrong_state" });
+        return reply.code(204).send();
+      });
+    }
+
+    // Previews also for hidden miniatures, which the public files route refuses to serve.
+    secured.get<{ Params: { id: string } }>("/internal/admin/miniatures/:id/thumb", async (req, reply) => {
+      const key = isPublicId(req.params.id) ? await adminThumbKey(deps.db, req.params.id) : null;
+      const obj = key ? await deps.storage.get(key) : null;
+      if (!obj) return reply.code(404).send({ error: "not_found" });
+      reply.header("Content-Type", "image/webp").header("X-Content-Type-Options", "nosniff");
+      if (obj.contentLength !== undefined) reply.header("Content-Length", obj.contentLength);
+      return reply.send(obj.body);
     });
 
     secured.get<{ Querystring: { limit?: string } }>("/internal/admin/actions", async (req) => {
