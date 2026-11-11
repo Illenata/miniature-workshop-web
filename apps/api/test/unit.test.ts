@@ -8,6 +8,8 @@ import { deriveFromCard } from "../src/media/derivatives.ts";
 import { objectKey } from "../src/storage/storage.ts";
 import { placeholderCard, placeholderGlb } from "../scripts/placeholders.ts";
 import { hashIp } from "../src/lib/ip-hash.ts";
+import { hashPassword, verifyPassword } from "../src/lib/password.ts";
+import { base32Decode, base32Encode, totpAt, verifyTotp } from "../src/lib/totp.ts";
 
 describe("public ids", () => {
   it("are valid and do not repeat", () => {
@@ -106,5 +108,43 @@ describe("IP hashing", () => {
     expect(a).toMatch(/^[0-9a-f]{64}$/);
     expect(hashIp("203.0.113.7", "salt-one-0123456789")).toBe(a);
     expect(hashIp("203.0.113.7", "salt-two-0123456789")).not.toBe(a);
+  });
+});
+
+describe("TOTP (RFC 6238)", () => {
+  // RFC 6238 appendix B test secret, SHA-1.
+  const secret = Buffer.from("12345678901234567890");
+  const b32 = base32Encode(secret);
+
+  it("matches the RFC test vectors", () => {
+    expect(totpAt(secret, Math.floor(59 / 30), 8)).toBe("94287082");
+    expect(totpAt(secret, Math.floor(1111111109 / 30), 8)).toBe("07081804");
+    expect(totpAt(secret, Math.floor(2000000000 / 30), 8)).toBe("69279037");
+  });
+
+  it("round-trips base32", () => {
+    expect(base32Decode(b32).equals(secret)).toBe(true);
+    expect(base32Decode("gezd gnbv-GY3T QOJQ gezdgnbvgy3tqojq").equals(secret)).toBe(true);
+  });
+
+  it("accepts the current code and one step of clock drift, nothing else", () => {
+    const now = 1_700_000_000_000;
+    const step = Math.floor(now / 30_000);
+    expect(verifyTotp(b32, totpAt(secret, step), now)).toBe(step);
+    expect(verifyTotp(b32, totpAt(secret, step - 1), now)).toBe(step - 1);
+    expect(verifyTotp(b32, totpAt(secret, step + 1), now)).toBe(step + 1);
+    expect(verifyTotp(b32, totpAt(secret, step - 2), now)).toBeNull();
+    expect(verifyTotp(b32, "12345", now)).toBeNull();
+    expect(verifyTotp(b32, "abcdef", now)).toBeNull();
+  });
+});
+
+describe("admin password", () => {
+  it("verifies the right password only, and the hash has no $ (docker env files)", async () => {
+    const hash = await hashPassword("correct horse battery");
+    expect(hash).toMatch(/^scrypt:\d+:\d+:\d+:[\w-]+:[\w-]+$/);
+    expect(await verifyPassword("correct horse battery", hash)).toBe(true);
+    expect(await verifyPassword("correct horse batterY", hash)).toBe(false);
+    expect(await verifyPassword("x", "garbage")).toBe(false);
   });
 });

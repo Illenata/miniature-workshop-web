@@ -40,6 +40,14 @@ const configSchema = z.object({
    */
   TRUST_PROXY: z.string().default("loopback,linklocal,uniquelocal"),
 
+  /**
+   * Admin panel login (spec section 7): scrypt hash of the password and the TOTP secret,
+   * both printed by `npm run admin:setup`. Either one empty: the admin panel is disabled.
+   */
+  ADMIN_PASSWORD_HASH: z.string().optional().transform((v) => v?.trim() || undefined),
+  ADMIN_TOTP_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
+  ADMIN_SESSION_HOURS: z.coerce.number().min(1).max(24).default(12),
+
   /** Moderator email (spec section 7). Empty SMTP_URL or MODERATOR_EMAIL: no email, only logs. */
   SMTP_URL: z.string().optional().transform((v) => v?.trim() || undefined),
   MAIL_FROM: z.string().default("Miniature Workshop <noreply@localhost>"),

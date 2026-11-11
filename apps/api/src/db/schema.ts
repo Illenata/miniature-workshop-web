@@ -1,12 +1,14 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  date,
   boolean,
   index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -151,6 +153,37 @@ export const appState = pgTable("app_state", {
   value: jsonb().notNull(),
   updatedAt: createdAt(),
 });
+
+/** Admin sessions (spec section 7: 12 hours). Only the SHA-256 of the token is stored. */
+export const adminSessions = pgTable("admin_sessions", {
+  tokenHash: varchar({ length: 64 }).primaryKey(),
+  createdAt: createdAt(),
+  expiresAt: timestamp({ withTimezone: true, precision: 3 }).notNull(),
+});
+
+/** Log of everything the admin does (spec section 4, AdminAction). */
+export const adminActions = pgTable(
+  "admin_actions",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    actor: varchar({ length: 64 }).notNull(),
+    action: varchar({ length: 64 }).notNull(),
+    target: text().notNull().default(""),
+    createdAt: createdAt(),
+  },
+  (t) => [index("admin_actions_created_idx").on(t.createdAt)],
+);
+
+/** Per-day counters for the admin statistics (spec section 7), e.g. miniature page views. */
+export const dailyStats = pgTable(
+  "daily_stats",
+  {
+    day: date().notNull(),
+    metric: varchar({ length: 64 }).notNull(),
+    value: bigint({ mode: "number" }).notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.metric] })],
+);
 
 export type CollectionRow = typeof collections.$inferSelect;
 export type MiniatureRow = typeof miniatures.$inferSelect;

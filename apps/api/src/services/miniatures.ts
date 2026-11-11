@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { Faction, MiniatureItem, MiniatureList, Sort } from "@mw/contract";
 import type { Db } from "../db/client.ts";
-import { collections, miniatures, type MiniatureRow } from "../db/schema.ts";
+import { collections, dailyStats, miniatures, type MiniatureRow } from "../db/schema.ts";
 import { collectionScope, decodeCursor, encodeCursor, galleryScope } from "../lib/cursor.ts";
 import { HttpError } from "../lib/errors.ts";
 
@@ -252,6 +252,18 @@ export async function getMiniature(
       .where(eq(miniatures.id, id))
       .returning({ views: miniatures.views });
     if (updated) row.m.views = updated.views;
+    await bumpDailyStat(db, "miniature_views");
   }
   return { kind: "ok", item: toItem(row, urls) };
+}
+
+/** Adds to today's (UTC) counter for the admin statistics. */
+export async function bumpDailyStat(db: Db, metric: string, by = 1): Promise<void> {
+  await db
+    .insert(dailyStats)
+    .values({ day: sql`(now() at time zone 'utc')::date`, metric, value: by })
+    .onConflictDoUpdate({
+      target: [dailyStats.day, dailyStats.metric],
+      set: { value: sql`${dailyStats.value} + ${by}` },
+    });
 }

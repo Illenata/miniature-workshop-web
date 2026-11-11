@@ -16,11 +16,13 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "db:generate": "npm run db:generate -w @mw/api",
-    "seed": "npm run seed -w @mw/api --"
+    "seed": "npm run seed -w @mw/api --",
+    "admin:setup": "npm run admin:setup -w @mw/api"
   },
   "devDependencies": {
     "@types/node": "24.19.1",
     "@types/nodemailer": "8.0.2",
+    "@types/qrcode": "1.5.6",
     "drizzle-kit": "0.31.11",
     "esbuild": "0.28.2",
     "tsx": "4.23.15",

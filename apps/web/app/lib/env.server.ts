@@ -12,6 +12,8 @@ export const env = {
   /** Origin of user files; allowed in the Content-Security-Policy. */
   filesOrigin: new URL(process.env.FILES_BASE_URL ?? "http://localhost:3000/files").origin,
   production: process.env.NODE_ENV === "production",
+  /** Public origin of the pages; decides whether cookies are Secure and which Origin may POST. */
+  publicOrigin: new URL(process.env.PUBLIC_BASE_URL ?? "http://localhost:5173").origin,
   /** Spec appendix C: empty hides the button (the links do not exist yet). */
   steamStoreUrl: process.env.STEAM_STORE_URL?.trim() || null,
   discordUrl: process.env.DISCORD_URL?.trim() || null,

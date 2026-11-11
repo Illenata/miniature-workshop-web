@@ -2,6 +2,7 @@ import Fastify, { type FastifyServerOptions } from "fastify";
 import type { Config } from "./config.ts";
 import type { Db } from "./db/client.ts";
 import { HttpError } from "./lib/errors.ts";
+import { adminRoutes } from "./routes/admin.ts";
 import { collectionRoutes } from "./routes/collections.ts";
 import { filesRoutes } from "./routes/files.ts";
 import { galleryRoutes } from "./routes/gallery.ts";
@@ -65,6 +66,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(miniatureRoutes, deps);
   await app.register(collectionRoutes, deps);
   await app.register(reportRoutes, deps);
+  await app.register(adminRoutes, deps);
   await app.register(filesRoutes, deps);
 
   return app;

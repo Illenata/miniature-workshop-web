@@ -7,6 +7,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
   useRouteLoaderData,
 } from "react-router";
 import type { Route } from "./+types/root";
@@ -51,6 +52,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   useEffect(() => markHydrated(), []);
+  // The admin panel has its own header (routes/admin/layout.tsx).
+  const isAdmin = useLocation().pathname.startsWith("/admin");
+  if (isAdmin) return <Outlet />;
   return (
     <>
       <SiteHeader />
