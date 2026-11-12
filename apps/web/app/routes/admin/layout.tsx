@@ -18,7 +18,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 /** Sections arrive step by step; the ones not built yet are listed but not linked. */
 const SECTIONS: { name: string; to?: string }[] = [
   { name: "Мініатюри", to: "/admin/miniatures" },
-  { name: "Скарги" },
+  { name: "Скарги", to: "/admin/reports" },
   { name: "Колекції", to: "/admin/collections" },
   { name: "Стоп-слова" },
   { name: "Статистика" },

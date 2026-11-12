@@ -16,7 +16,8 @@ export async function moderationAction(request: Request) {
   const intent = String(form.get("intent") ?? "");
 
   let path: string;
-  if ((MINIATURE_INTENTS as readonly string[]).includes(intent)) path = `/miniatures/${id}/${intent}`;
+  if (intent === "dismiss") path = `/miniatures/${id}/dismiss-reports`;
+  else if ((MINIATURE_INTENTS as readonly string[]).includes(intent)) path = `/miniatures/${id}/${intent}`;
   else if ((COLLECTION_INTENTS as readonly string[]).includes(intent)) path = `/collections/${id}/${intent}`;
   else return data({ error: "Невідома дія." }, { status: 400 });
 

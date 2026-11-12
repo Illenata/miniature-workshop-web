@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { data, Link, useFetcher } from "react-router";
+import { data, Link } from "react-router";
 import type { Route } from "./+types/miniatures";
+import { MiniatureModeration, statusLabel } from "../../components/admin/MiniatureModeration";
 import { ADMIN_HEADERS } from "../../lib/admin-meta";
 import { moderationAction } from "../../lib/admin-actions.server";
 import { adminFetch, kyivDateTime, requireAdmin } from "../../lib/admin.server";
@@ -67,23 +67,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 type Row = Route.ComponentProps["loaderData"]["items"][number];
 
-function statusLabel(m: Row): { text: string; tone: string } {
-  if (m.status === "removed") return { text: "Видалена", tone: "text-muted" };
-  if (m.status === "hidden") {
-    return m.hiddenReason === "reports"
-      ? { text: "Схована через скарги", tone: "text-red-300" }
-      : { text: "Схована модератором", tone: "text-amber-300" };
-  }
-  return m.banned ? { text: "Колекцію забанено", tone: "text-red-300" } : { text: "Видима", tone: "text-emerald-300" };
-}
-
-const BTN = "min-h-10 rounded-full border border-line px-4 text-sm hover:border-muted disabled:opacity-60";
-const BTN_DANGER = "min-h-10 rounded-full border border-red-400/60 px-4 text-sm text-red-300 hover:border-red-300 disabled:opacity-60";
-
 function MiniatureRow({ m }: { m: Row }) {
-  const fetcher = useFetcher<typeof action>();
-  const busy = fetcher.state !== "idle";
-  const [confirming, setConfirming] = useState(false);
   const status = statusLabel(m);
   const publicPage = m.status === "visible" && !m.banned;
 
@@ -124,46 +108,7 @@ function MiniatureRow({ m }: { m: Row }) {
         </div>
       </div>
 
-      {fetcher.data?.error && (
-        <p role="alert" className="mt-2 text-sm text-red-300">
-          {fetcher.data.error}
-        </p>
-      )}
-
-      {m.status !== "removed" && (
-        <fetcher.Form method="post" className="mt-3 flex flex-wrap gap-2" onSubmit={() => setConfirming(false)}>
-          {confirming ? (
-            <>
-              <p className="w-full text-sm">Стерти файли цієї мініатюри назавжди? Повернути їх буде неможливо.</p>
-              <button type="submit" name="intent" value="remove" disabled={busy} className={BTN_DANGER}>
-                Так, видалити
-              </button>
-              <button type="button" onClick={() => setConfirming(false)} className={BTN}>
-                Скасувати
-              </button>
-              <input type="hidden" name="id" value={m.id} />
-            </>
-          ) : (
-            <>
-              <input type="hidden" name="id" value={m.id} />
-              <button type="submit" name="intent" value={m.status === "visible" ? "hide" : "show"} disabled={busy} className={BTN}>
-                {m.status === "visible" ? "Сховати" : "Показати"}
-              </button>
-              <button type="button" onClick={() => setConfirming(true)} disabled={busy} className={BTN}>
-                Видалити
-              </button>
-            </>
-          )}
-        </fetcher.Form>
-      )}
-      {m.status !== "removed" && !confirming && (
-        <fetcher.Form method="post" className="mt-2">
-          <input type="hidden" name="id" value={m.collectionId} />
-          <button type="submit" name="intent" value={m.banned ? "unban" : "ban"} disabled={busy} className={BTN}>
-            {m.banned ? "Розбанити колекцію" : "Забанити колекцію"}
-          </button>
-        </fetcher.Form>
-      )}
+      <MiniatureModeration m={m} />
     </li>
   );
 }

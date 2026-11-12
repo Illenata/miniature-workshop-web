@@ -13,6 +13,7 @@ const ACTION_NAMES: Record<string, string> = {
   hide_miniature: "Сховано мініатюру",
   show_miniature: "Показано мініатюру",
   remove_miniature: "Видалено мініатюру",
+  dismiss_reports: "Відхилено скарги",
   ban_collection: "Забанено колекцію",
   unban_collection: "Розбанено колекцію",
 };

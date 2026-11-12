@@ -13,6 +13,7 @@ import {
   showMiniature,
 } from "../services/admin-miniatures.ts";
 import { ADMIN_COLLECTION_FILTERS, listAdminCollections, setCollectionBanned } from "../services/admin-collections.ts";
+import { dismissReports, listReportQueue } from "../services/admin-reports.ts";
 
 const loginSchema = z.object({
   password: z.string().min(1).max(256),
@@ -97,6 +98,19 @@ export async function adminRoutes(app: FastifyInstance, deps: AppDeps) {
     secured.post<{ Params: { id: string } }>("/internal/admin/miniatures/:id/remove", async (req, reply) => {
       if (!isPublicId(req.params.id)) return reply.code(404).send({ error: "not_found" });
       const result = await removeMiniature(deps.db, deps.storage, req.params.id);
+      if (result === "not_found") return reply.code(404).send({ error: "not_found" });
+      if (result === "wrong_state") return reply.code(409).send({ error: "wrong_state" });
+      return reply.code(204).send();
+    });
+
+    // Moderation queue: miniatures with open reports, and the button that closes them.
+    secured.get<{ Querystring: { cursor?: string } }>("/internal/admin/reports", async (req) =>
+      listReportQueue(deps.db, { cursor: req.query.cursor }),
+    );
+
+    secured.post<{ Params: { id: string } }>("/internal/admin/miniatures/:id/dismiss-reports", async (req, reply) => {
+      if (!isPublicId(req.params.id)) return reply.code(404).send({ error: "not_found" });
+      const result = await dismissReports(deps.db, req.params.id);
       if (result === "not_found") return reply.code(404).send({ error: "not_found" });
       if (result === "wrong_state") return reply.code(409).send({ error: "wrong_state" });
       return reply.code(204).send();
