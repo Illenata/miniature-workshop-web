@@ -21,3 +21,6 @@ Thumbs.db
 
 # browser checks
 e2e/.out/
+
+# files the Claude app saves when they are sent in chat
+Claude outputs/
