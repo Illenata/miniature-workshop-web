@@ -16,6 +16,7 @@ export default [
   layout("routes/admin/layout.tsx", [
     route("admin", "routes/admin/home.tsx"),
     route("admin/miniatures", "routes/admin/miniatures.tsx"),
+    route("admin/collections", "routes/admin/collections.tsx"),
   ]),
   route("lang", "routes/lang.ts"),
   route("*", "routes/not-found.tsx"),

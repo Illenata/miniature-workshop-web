@@ -12,6 +12,9 @@ const ACTION_NAMES: Record<string, string> = {
   logout: "Вихід",
   hide_miniature: "Сховано мініатюру",
   show_miniature: "Показано мініатюру",
+  remove_miniature: "Видалено мініатюру",
+  ban_collection: "Забанено колекцію",
+  unban_collection: "Розбанено колекцію",
 };
 
 export async function loader({ request }: Route.LoaderArgs) {

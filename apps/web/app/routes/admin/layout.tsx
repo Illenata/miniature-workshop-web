@@ -19,7 +19,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 const SECTIONS: { name: string; to?: string }[] = [
   { name: "Мініатюри", to: "/admin/miniatures" },
   { name: "Скарги" },
-  { name: "Колекції" },
+  { name: "Колекції", to: "/admin/collections" },
   { name: "Стоп-слова" },
   { name: "Статистика" },
   { name: "Журнал" },
@@ -45,7 +45,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           <nav aria-label="Розділи" className="-mx-4 flex gap-5 overflow-x-auto px-4 pb-3 text-sm whitespace-nowrap text-muted">
             {SECTIONS.map(({ name, to }) =>
               to ? (
-                <NavLink key={name} to={to} className={({ isActive }) => (isActive ? "text-ink" : "hover:text-ink")}>
+                <NavLink key={name} to={to} className={({ isActive }) => (isActive ? "font-medium text-ink" : "hover:text-ink")}>
                   {name}
                 </NavLink>
               ) : (

@@ -1,5 +1,6 @@
 import { and, count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { Db } from "../db/client.ts";
+import type { Storage } from "../storage/storage.ts";
 import { collections, miniatures, reports } from "../db/schema.ts";
 import { decodeCursor, encodeCursor } from "../lib/cursor.ts";
 import { logAdminAction } from "./admin-auth.ts";
@@ -132,4 +133,49 @@ export async function adminThumbKey(db: Db, id: string): Promise<string | null> 
   const [m] = await db.select({ status: miniatures.status, files: miniatures.files }).from(miniatures).where(eq(miniatures.id, id));
   if (!m || m.status === "removed") return null;
   return m.files.thumb400.key;
+}
+
+/**
+ * Remove for good (spec section 7): the files are erased from storage and only a tombstone
+ * row stays. Irreversible, and also the way to serve data deletion requests in phase 1.
+ *
+ * Order matters: first the miniature stops being public, then the files go, and only then
+ * it is marked removed. If the storage fails midway the miniature stays hidden and the
+ * moderator can press the button again; nothing is ever shown without its files.
+ */
+export async function removeMiniature(db: Db, storage: Storage, id: string): Promise<ModerationResult> {
+  const [m] = await db
+    .select({ status: miniatures.status, title: miniatures.title, files: miniatures.files })
+    .from(miniatures)
+    .where(eq(miniatures.id, id));
+  if (!m) return "not_found";
+  if (m.status === "removed") return "wrong_state";
+
+  if (m.status === "visible") {
+    await db
+      .update(miniatures)
+      .set({ status: "hidden", hiddenReason: "moderator", updatedAt: new Date() })
+      .where(and(eq(miniatures.id, id), eq(miniatures.status, "visible")));
+  }
+  const keys = Object.values(m.files)
+    .filter((f): f is { key: string; bytes: number } => Boolean(f))
+    .map((f) => f.key);
+  await storage.deleteMany(keys);
+
+  return db.transaction(async (tx) => {
+    const done = await tx
+      .update(miniatures)
+      .set({ status: "removed", hiddenReason: null, updatedAt: new Date() })
+      .where(and(eq(miniatures.id, id), sql`${miniatures.status} <> 'removed'`))
+      .returning({ id: miniatures.id });
+    if (done.length === 0) return "wrong_state";
+    const closed = await tx
+      .update(reports)
+      .set({ status: "resolved" })
+      .where(and(eq(reports.miniatureId, id), sql`${reports.status} = 'open'`))
+      .returning({ id: reports.id });
+    const note = closed.length ? ` (закрито скарг: ${closed.length})` : "";
+    await logAdminAction(tx as unknown as Db, "remove_miniature", `${id} ${m.title}${note}`);
+    return "ok";
+  });
 }

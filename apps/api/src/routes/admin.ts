@@ -9,8 +9,10 @@ import {
   adminThumbKey,
   hideMiniature,
   listAdminMiniatures,
+  removeMiniature,
   showMiniature,
 } from "../services/admin-miniatures.ts";
+import { ADMIN_COLLECTION_FILTERS, listAdminCollections, setCollectionBanned } from "../services/admin-collections.ts";
 
 const loginSchema = z.object({
   password: z.string().min(1).max(256),
@@ -85,6 +87,31 @@ export async function adminRoutes(app: FastifyInstance, deps: AppDeps) {
         const result = await run(deps.db, req.params.id);
         if (result === "not_found") return reply.code(404).send({ error: "not_found" });
         // Already in that state (double click, or changed meanwhile): tell the page to refresh.
+        if (result === "wrong_state") return reply.code(409).send({ error: "wrong_state" });
+        return reply.code(204).send();
+      });
+    }
+
+    // Erases the files for good. On a storage error (500) the miniature stays hidden and
+    // the request can simply be repeated.
+    secured.post<{ Params: { id: string } }>("/internal/admin/miniatures/:id/remove", async (req, reply) => {
+      if (!isPublicId(req.params.id)) return reply.code(404).send({ error: "not_found" });
+      const result = await removeMiniature(deps.db, deps.storage, req.params.id);
+      if (result === "not_found") return reply.code(404).send({ error: "not_found" });
+      if (result === "wrong_state") return reply.code(409).send({ error: "wrong_state" });
+      return reply.code(204).send();
+    });
+
+    secured.get<{ Querystring: { status?: string; cursor?: string } }>("/internal/admin/collections", async (req) => {
+      const status = ADMIN_COLLECTION_FILTERS.find((s) => s === req.query.status) ?? "all";
+      return listAdminCollections(deps.db, { status, cursor: req.query.cursor });
+    });
+
+    for (const verb of ["ban", "unban"] as const) {
+      secured.post<{ Params: { id: string } }>(`/internal/admin/collections/:id/${verb}`, async (req, reply) => {
+        if (!isPublicId(req.params.id)) return reply.code(404).send({ error: "not_found" });
+        const result = await setCollectionBanned(deps.db, req.params.id, verb === "ban");
+        if (result === "not_found") return reply.code(404).send({ error: "not_found" });
         if (result === "wrong_state") return reply.code(409).send({ error: "wrong_state" });
         return reply.code(204).send();
       });
