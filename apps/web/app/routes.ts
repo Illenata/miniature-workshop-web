@@ -17,6 +17,7 @@ export default [
     route("admin", "routes/admin/home.tsx"),
     route("admin/miniatures", "routes/admin/miniatures.tsx"),
     route("admin/reports", "routes/admin/reports.tsx"),
+    route("admin/stop-words", "routes/admin/stop-words.tsx"),
     route("admin/collections", "routes/admin/collections.tsx"),
   ]),
   route("lang", "routes/lang.ts"),

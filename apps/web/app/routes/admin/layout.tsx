@@ -20,7 +20,7 @@ const SECTIONS: { name: string; to?: string }[] = [
   { name: "Мініатюри", to: "/admin/miniatures" },
   { name: "Скарги", to: "/admin/reports" },
   { name: "Колекції", to: "/admin/collections" },
-  { name: "Стоп-слова" },
+  { name: "Стоп-слова", to: "/admin/stop-words" },
   { name: "Статистика" },
   { name: "Журнал" },
 ];

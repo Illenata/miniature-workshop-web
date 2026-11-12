@@ -28,6 +28,7 @@ export const faction = pgEnum("faction", ["painted", "gilded"]);
 export const hiddenReason = pgEnum("hidden_reason", ["reports", "moderator"]);
 export const reportReason = pgEnum("report_reason", ["offensive", "spam", "stolen", "other"]);
 export const reportStatus = pgEnum("report_status", ["open", "resolved"]);
+export const stopWordMatch = pgEnum("stop_word_match", ["word", "substring"]);
 
 export const collections = pgTable("collections", {
   id: varchar({ length: 12 }).primaryKey(),
@@ -146,6 +147,20 @@ export const reports = pgTable(
     index("reports_created_idx").on(t.createdAt),
   ],
 );
+
+/**
+ * Stop words (spec section 4, StopWord; section 7). `word` is shown as the moderator typed
+ * it; `normalized` is its form after normalisation (lib/stop-words.ts) and keeps two
+ * spellings of the same word from being added twice. `match` is the spec's per-word flag:
+ * whole word or substring.
+ */
+export const stopWords = pgTable("stop_words", {
+  id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  word: varchar({ length: 64 }).notNull(),
+  normalized: varchar({ length: 256 }).notNull().unique(),
+  match: stopWordMatch().notNull().default("word"),
+  createdAt: createdAt(),
+});
 
 /** Small durable key/value state (e.g. when the last moderator email went out). */
 export const appState = pgTable("app_state", {

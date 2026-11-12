@@ -14,11 +14,20 @@ import {
 } from "../services/admin-miniatures.ts";
 import { ADMIN_COLLECTION_FILTERS, listAdminCollections, setCollectionBanned } from "../services/admin-collections.ts";
 import { dismissReports, listReportQueue } from "../services/admin-reports.ts";
+import { STOP_WORD_MATCHES } from "../lib/stop-words.ts";
 
 const loginSchema = z.object({
   password: z.string().min(1).max(256),
   code: z.string().max(16),
 });
+
+/** One entry per line; a few hundred at once covers pasting the initial list. */
+const MAX_STOP_WORDS_PER_REQUEST = 500;
+const addStopWordsSchema = z.object({
+  words: z.string().max(64 * 1024),
+  match: z.enum(STOP_WORD_MATCHES),
+});
+const checkTextSchema = z.object({ text: z.string().max(2000) });
 
 function bearer(req: FastifyRequest): string {
   const header = req.headers.authorization ?? "";
@@ -114,6 +123,42 @@ export async function adminRoutes(app: FastifyInstance, deps: AppDeps) {
       if (result === "not_found") return reply.code(404).send({ error: "not_found" });
       if (result === "wrong_state") return reply.code(409).send({ error: "wrong_state" });
       return reply.code(204).send();
+    });
+
+    // Stop words (spec section 7): list, add, remove, check a text.
+    secured.get("/internal/admin/stop-words", async () => {
+      const items = await deps.stopWords.list();
+      return { items };
+    });
+
+    secured.post("/internal/admin/stop-words", { bodyLimit: 128 * 1024 }, async (req, reply) => {
+      const parsed = addStopWordsSchema.safeParse(req.body);
+      if (!parsed.success) return reply.code(400).send({ error: "invalid_request" });
+
+      const words = parsed.data.words.split(/\r?\n/).map((w) => w.trim()).filter(Boolean);
+      if (words.length === 0) return reply.code(400).send({ error: "invalid_request" });
+      if (words.length > MAX_STOP_WORDS_PER_REQUEST) {
+        return reply.code(400).send({ error: "too_many", max: MAX_STOP_WORDS_PER_REQUEST });
+      }
+
+      return deps.stopWords.add(words, parsed.data.match);
+    });
+
+    secured.delete<{ Params: { id: string } }>("/internal/admin/stop-words/:id", async (req, reply) => {
+      const id = Number(req.params.id);
+      if (!Number.isSafeInteger(id) || id < 1) return reply.code(404).send({ error: "not_found" });
+
+      const result = await deps.stopWords.remove(id);
+      if (result === "not_found") return reply.code(404).send({ error: "not_found" });
+
+      return reply.code(204).send();
+    });
+
+    secured.post("/internal/admin/stop-words/check", { bodyLimit: 16 * 1024 }, async (req, reply) => {
+      const parsed = checkTextSchema.safeParse(req.body);
+      if (!parsed.success) return reply.code(400).send({ error: "invalid_request" });
+
+      return deps.stopWords.check(parsed.data.text);
     });
 
     secured.get<{ Querystring: { status?: string; cursor?: string } }>("/internal/admin/collections", async (req) => {

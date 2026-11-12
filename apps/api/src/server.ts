@@ -3,6 +3,7 @@ import { buildApp } from "./app.ts";
 import { EXAMPLE_SALT, loadConfig } from "./config.ts";
 import { createDb, runMigrations } from "./db/client.ts";
 import { ModeratorNotifier } from "./services/notifier.ts";
+import { StopWords } from "./services/stop-words.ts";
 import { Storage } from "./storage/storage.ts";
 
 const config = loadConfig();
@@ -32,7 +33,7 @@ await runMigrations(db);
 await waitFor("storage", () => (config.S3_CREATE_BUCKET ? storage.ensureBucket() : storage.ping()));
 
 const notifier = new ModeratorNotifier(db, config);
-const app = await buildApp({ config, db, storage, notifier });
+const app = await buildApp({ config, db, storage, notifier, stopWords: new StopWords(db) });
 notifier.useLogger(app.log);
 // Reports that arrived while the server was down (or within the last hourly window).
 notifier.reportCreated();

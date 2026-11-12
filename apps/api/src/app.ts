@@ -10,9 +10,17 @@ import { healthRoutes } from "./routes/health.ts";
 import { miniatureRoutes } from "./routes/miniatures.ts";
 import { reportRoutes } from "./routes/reports.ts";
 import type { ModeratorNotifier } from "./services/notifier.ts";
+import type { StopWords } from "./services/stop-words.ts";
 import type { Storage } from "./storage/storage.ts";
 
-export type AppDeps = { config: Config; db: Db; storage: Storage; notifier: ModeratorNotifier };
+export type AppDeps = {
+  config: Config;
+  db: Db;
+  storage: Storage;
+  notifier: ModeratorNotifier;
+  /** One shared list: the admin edits it, uploads will check against it. */
+  stopWords: StopWords;
+};
 
 /**
  * Logs are JSON without personal data (spec section 3): requests are logged by
