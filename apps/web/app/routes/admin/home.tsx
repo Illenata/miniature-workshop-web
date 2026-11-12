@@ -1,24 +1,12 @@
 import type { Route } from "./+types/home";
 import { adminFetch, kyivDateTime, requireAdmin } from "../../lib/admin.server";
 import { ADMIN_HEADERS } from "../../lib/admin-meta";
+import { actionName } from "../../lib/admin-action-names";
+import { Link } from "react-router";
 
 export const headers = () => ADMIN_HEADERS;
 
 type Action = { id: number; actor: string; action: string; target: string; created_at: string };
-
-const ACTION_NAMES: Record<string, string> = {
-  login: "Вхід",
-  login_failed: "Невдала спроба входу",
-  logout: "Вихід",
-  hide_miniature: "Сховано мініатюру",
-  show_miniature: "Показано мініатюру",
-  remove_miniature: "Видалено мініатюру",
-  dismiss_reports: "Відхилено скарги",
-  add_stop_words: "Додано стоп-слова",
-  remove_stop_word: "Видалено стоп-слово",
-  ban_collection: "Забанено колекцію",
-  unban_collection: "Розбанено колекцію",
-};
 
 export async function loader({ request }: Route.LoaderArgs) {
   const session = await requireAdmin(request);
@@ -27,7 +15,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     actions: body.items.map((a) => ({
       id: a.id,
-      name: ACTION_NAMES[a.action] ?? a.action,
+      name: actionName(a.action),
       target: a.target,
       at: kyivDateTime(a.created_at),
       iso: a.created_at,
@@ -39,7 +27,12 @@ export default function AdminHome({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <h1 className="text-xl font-semibold tracking-tight">Останні дії</h1>
-      <p className="mt-1 text-sm text-muted">Тут з'являтимуться всі дії модератора: приховування, видалення, бани.</p>
+      <p className="mt-1 text-sm text-muted">
+        Десять останніх записів.{" "}
+        <Link to="/admin/journal" className="underline underline-offset-4 hover:text-ink">
+          Увесь журнал
+        </Link>
+      </p>
       <table className="mt-4 w-full max-w-2xl text-left text-sm">
         <thead className="text-muted">
           <tr>

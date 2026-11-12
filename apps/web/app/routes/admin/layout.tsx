@@ -15,14 +15,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { sessionUntil: until };
 }
 
-/** Sections arrive step by step; the ones not built yet are listed but not linked. */
-const SECTIONS: { name: string; to?: string }[] = [
+const SECTIONS: { name: string; to: string }[] = [
   { name: "Мініатюри", to: "/admin/miniatures" },
   { name: "Скарги", to: "/admin/reports" },
   { name: "Колекції", to: "/admin/collections" },
   { name: "Стоп-слова", to: "/admin/stop-words" },
-  { name: "Статистика" },
-  { name: "Журнал" },
+  { name: "Статистика", to: "/admin/stats" },
+  { name: "Журнал", to: "/admin/journal" },
 ];
 
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
@@ -43,17 +42,11 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           </div>
           {/* One row that scrolls sideways on a phone instead of wrapping into a column. */}
           <nav aria-label="Розділи" className="-mx-4 flex gap-5 overflow-x-auto px-4 pb-3 text-sm whitespace-nowrap text-muted">
-            {SECTIONS.map(({ name, to }) =>
-              to ? (
-                <NavLink key={name} to={to} className={({ isActive }) => (isActive ? "font-medium text-ink" : "hover:text-ink")}>
-                  {name}
-                </NavLink>
-              ) : (
-                <span key={name} aria-disabled="true" title="Скоро" className="opacity-50">
-                  {name}
-                </span>
-              ),
-            )}
+            {SECTIONS.map(({ name, to }) => (
+              <NavLink key={name} to={to} className={({ isActive }) => (isActive ? "font-medium text-ink" : "hover:text-ink")}>
+                {name}
+              </NavLink>
+            ))}
           </nav>
         </div>
       </header>

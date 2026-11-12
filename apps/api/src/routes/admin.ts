@@ -14,6 +14,7 @@ import {
 } from "../services/admin-miniatures.ts";
 import { ADMIN_COLLECTION_FILTERS, listAdminCollections, setCollectionBanned } from "../services/admin-collections.ts";
 import { dismissReports, listReportQueue } from "../services/admin-reports.ts";
+import { adminStats, listAdminActions } from "../services/admin-stats.ts";
 import { STOP_WORD_MATCHES } from "../lib/stop-words.ts";
 
 const loginSchema = z.object({
@@ -184,6 +185,18 @@ export async function adminRoutes(app: FastifyInstance, deps: AppDeps) {
       reply.header("Content-Type", "image/webp").header("X-Content-Type-Options", "nosniff");
       if (obj.contentLength !== undefined) reply.header("Content-Length", obj.contentLength);
       return reply.send(obj.body);
+    });
+
+    secured.get("/internal/admin/stats", async () => adminStats(deps.db));
+
+    // The journal page: everything, 50 at a time, optionally only moderation or only logins.
+    secured.get<{ Querystring: { before?: string; filter?: string } }>("/internal/admin/journal", async (req) => {
+      const before = Number(req.query.before);
+
+      return listAdminActions(deps.db, {
+        before: Number.isSafeInteger(before) && before > 0 ? before : undefined,
+        action: req.query.filter,
+      });
     });
 
     secured.get<{ Querystring: { limit?: string } }>("/internal/admin/actions", async (req) => {

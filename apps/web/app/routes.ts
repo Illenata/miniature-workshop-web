@@ -18,6 +18,8 @@ export default [
     route("admin/miniatures", "routes/admin/miniatures.tsx"),
     route("admin/reports", "routes/admin/reports.tsx"),
     route("admin/stop-words", "routes/admin/stop-words.tsx"),
+    route("admin/stats", "routes/admin/stats.tsx"),
+    route("admin/journal", "routes/admin/journal.tsx"),
     route("admin/collections", "routes/admin/collections.tsx"),
   ]),
   route("lang", "routes/lang.ts"),
