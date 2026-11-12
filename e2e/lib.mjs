@@ -10,7 +10,7 @@ import { join } from "node:path";
 const here = fileURLToPath(new URL(".", import.meta.url));
 
 /** Value from the environment, then from the repo's .env, then from .env.example. */
-function setting(key) {
+export function setting(key) {
   if (process.env[key]) return process.env[key];
   for (const file of [".env", ".env.example"]) {
     const path = join(here, "..", file);

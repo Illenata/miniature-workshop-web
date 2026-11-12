@@ -29,6 +29,7 @@ node sort.mjs       # сортування галереї
 node mpage.mjs      # сторінка мініатюри, OG-теги, перегляди, схована → 404
 node report.mjs     # скарги; три скарги ховають мініатюру
 node coll.mjs       # сторінка колекції, QR, забанена → 404
+node landing.mjs    # лендинг, кнопки Steam і Discord за конфігом, /privacy і /terms, мова
 
 # адмінка: потрібен пароль, з якого зроблено ADMIN_PASSWORD_HASH у .env
 E2E_ADMIN_PASSWORD=... node admin1.mjs   # вхід, TOTP, сесії, вихід

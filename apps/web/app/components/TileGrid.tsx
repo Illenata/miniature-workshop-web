@@ -22,6 +22,10 @@ type Props = {
   emptyText: string;
 };
 
+/** 2 columns on phones up to 6 on wide screens; MiniatureTile's TILE_SIZES matches these. */
+export const GRID_CLASS =
+  "grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6";
+
 const cacheKey = (historyKey: string) => `grid:${historyKey}`;
 
 /**
@@ -91,7 +95,7 @@ export function TileGrid({ historyKey, page, action, params = {}, showWorkshop =
       {state.tiles.length === 0 ? (
         <p className="py-16 text-center text-muted">{emptyText}</p>
       ) : (
-        <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+        <ul className={GRID_CLASS}>
           {state.tiles.map((tile, i) => (
             <MiniatureTile
               key={tile.id}

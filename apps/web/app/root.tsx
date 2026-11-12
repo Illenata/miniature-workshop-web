@@ -11,6 +11,7 @@ import {
   useRouteLoaderData,
 } from "react-router";
 import type { Route } from "./+types/root";
+import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
 import { markHydrated } from "./lib/hydration";
 import { useT } from "./lib/i18n";
@@ -61,6 +62,7 @@ export default function App() {
       <main id="content">
         <Outlet />
       </main>
+      <SiteFooter />
     </>
   );
 }

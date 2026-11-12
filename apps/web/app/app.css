@@ -28,3 +28,46 @@
     @apply outline-2 outline-offset-2 outline-accent;
   }
 }
+
+/* Text pages rendered from Markdown (/privacy, /terms): plain tags, styled here. */
+@layer components {
+  .doc {
+    @apply text-base leading-relaxed;
+  }
+  .doc h1 {
+    @apply text-2xl font-semibold tracking-tight sm:text-3xl;
+  }
+  .doc h2 {
+    @apply mt-8 text-lg font-semibold tracking-tight;
+  }
+  .doc h3 {
+    @apply mt-6 font-semibold;
+  }
+  .doc p,
+  .doc ul,
+  .doc ol {
+    @apply mt-3;
+  }
+  .doc ul {
+    @apply list-disc pl-5;
+  }
+  .doc ol {
+    @apply list-decimal pl-5;
+  }
+  .doc li + li {
+    @apply mt-1;
+  }
+  .doc em {
+    @apply text-muted;
+  }
+  .doc a {
+    @apply underline underline-offset-4 hover:text-accent;
+  }
+  .doc table {
+    @apply mt-3 block overflow-x-auto text-sm;
+  }
+  .doc th,
+  .doc td {
+    @apply border border-line px-3 py-2 text-left align-top;
+  }
+}
