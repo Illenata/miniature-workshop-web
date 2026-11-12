@@ -13,6 +13,7 @@
 | `apps/web` | Сторінки: React Router 7 із серверним рендером, Tailwind, рядки інтерфейсу в `app/i18n/*.json` |
 | `apps/api` | Сервер на Fastify: API, віддача файлів, міграції (`drizzle/`), сід (`scripts/seed.ts`) |
 | `packages/contract` | Zod-схеми контракту (розділи 5, 8 і 14 ТЗ): manifest, елемент мініатюри, коди помилок |
+| `e2e` | Перевірки в браузері (Playwright), запускаються вручну проти локального сайту: `e2e/README.md` |
 | `docker-compose.yml` | PostgreSQL, RustFS (локальне S3-сховище), API і сторінки |
 | `.env.example` | Усі змінні з поясненнями |
 
